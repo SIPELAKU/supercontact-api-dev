@@ -1,5 +1,11 @@
-def test_login_success(client, db_session):
-    response = client.post("/api/v1/auth/login", json={
+import pytest
+
+auth_prefix = "/api/v1/auth"
+
+
+@pytest.mark.asyncio
+async def test_login_success(client):
+    response = await client.post(f"{auth_prefix}/login", json={
         "email": "admin",
         "password": "admin"
     })
@@ -12,8 +18,9 @@ def test_login_success(client, db_session):
     assert "user" in response_json["data"]
 
 
-def test_login_user_not_found(client, db_session):
-    response = client.post("/api/v1/auth/login", json={
+@pytest.mark.asyncio
+async def test_login_user_not_found(client):
+    response = await client.post(f"{auth_prefix}/login", json={
         "email": "salah",
         "password": "admin"
     })
@@ -26,8 +33,9 @@ def test_login_user_not_found(client, db_session):
     assert response_json["error"]["message"] == "User not found"
 
 
-def test_login_wrong_password(client, db_session):
-    response = client.post("/api/v1/auth/login", json={
+@pytest.mark.asyncio
+async def test_login_wrong_password(client):
+    response = await client.post(f"{auth_prefix}/login", json={
         "email": "admin",
         "password": "salah"
     })

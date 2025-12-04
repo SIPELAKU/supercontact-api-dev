@@ -16,6 +16,6 @@
 #   SECRET_DETECTION_ENABLED: 'true'
 # secret_detection:
 #   stage: secret-detection
-include:
-  - project: "richardryansolvera-group/supercontact/ci-cd-templates"
-    file: "/api-template.yml"
+#include:
+#  - project: "richardryansolvera-group/supercontact/ci-cd-templates"
+#    file: "/api-template.yml"

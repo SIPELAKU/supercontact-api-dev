@@ -1,6 +1,12 @@
-def test_get_all_users(client, auth_token):
-    response = client.get(
-        "/api/v1/users",
+import pytest
+
+user_prefix = "/api/v1/users"
+
+
+@pytest.mark.asyncio
+async def test_get_all_users(client, auth_token):
+    response = await client.get(
+        user_prefix,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -11,8 +17,9 @@ def test_get_all_users(client, auth_token):
     assert "total" in response_json["data"]
 
 
-def test_get_all_users_without_token(client):
-    response = client.get("/api/v1/users")
+@pytest.mark.asyncio
+async def test_get_all_users_without_token(client):
+    response = await client.get(user_prefix)
 
     assert response.status_code == 401
     response_json = response.json()
@@ -22,9 +29,10 @@ def test_get_all_users_without_token(client):
     assert response_json["error"]["message"] == "Authorization token is required"
 
 
-def test_get_all_users_wrong_token(client):
-    response = client.get(
-        "/api/v1/users",
+@pytest.mark.asyncio
+async def test_get_all_users_wrong_token(client):
+    response = await client.get(
+        user_prefix,
         headers={"Authorization": f"Bearer Token Salah"}
     )
 

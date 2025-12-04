@@ -1,12 +1,21 @@
+import pytest
 from sqlmodel import select
 
 from app.models import Lead, LeadSource, User, LeadStatus
 
+lead_prefix = "/api/v1/leads"
+
+
+async def get_all(db_async_session, table):
+    result = await db_async_session.scalars(select(table))
+    return result.all()
+
 
 # TEST GET ALL LEADS
-def test_get_all_leads_success(client, auth_token):
-    response = client.get(
-        "/api/v1/leads",
+@pytest.mark.asyncio
+async def test_get_all_leads_success(client, auth_token):
+    response = await client.get(
+        lead_prefix,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -18,8 +27,9 @@ def test_get_all_leads_success(client, auth_token):
     assert "id" in response_json["data"]["leads"][0]
 
 
-def test_get_all_leads_without_token(client):
-    response = client.get("/api/v1/leads")
+@pytest.mark.asyncio
+async def test_get_all_leads_without_token(client):
+    response = await client.get(lead_prefix)
 
     assert response.status_code == 401
     response_json = response.json()
@@ -29,9 +39,10 @@ def test_get_all_leads_without_token(client):
     assert response_json["error"]["message"] == "Authorization token is required"
 
 
-def test_get_all_leads_wrong_token(client):
-    response = client.get(
-        "/api/v1/users",
+@pytest.mark.asyncio
+async def test_get_all_leads_wrong_token(client):
+    response = await client.get(
+        lead_prefix,
         headers={"Authorization": f"Bearer Token Salah"}
     )
 
@@ -44,8 +55,9 @@ def test_get_all_leads_wrong_token(client):
 
 
 # TEST CREATE NEW LEAD
-def test_create_lead_success(client, db_session, auth_token):
-    users = db_session.exec(select(User)).all()
+@pytest.mark.asyncio
+async def test_create_lead_success(client, db_async_session, auth_token):
+    users = await get_all(db_async_session, User)
 
     data = {
         "lead_name": "rawrrrrsss ayaya ashiappp",
@@ -56,8 +68,8 @@ def test_create_lead_success(client, db_session, auth_token):
         "last_contacted": "2025-11-29"
     }
 
-    response = client.post(
-        f"/api/v1/leads",
+    response = await client.post(
+        lead_prefix,
         json=data,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
@@ -70,8 +82,9 @@ def test_create_lead_success(client, db_session, auth_token):
     assert "id" in response_json["data"]
 
 
-def test_create_lead_failed(client, db_session, auth_token):
-    users = db_session.exec(select(User)).all()
+@pytest.mark.asyncio
+async def test_create_lead_failed(client, db_async_session, auth_token):
+    users = await get_all(db_async_session, User)
 
     data = {
         "lead_name": "rawrrrrsss ayaya ashiappp",
@@ -82,8 +95,8 @@ def test_create_lead_failed(client, db_session, auth_token):
         "last_contacted": "2025-11-29"
     }
 
-    response = client.post(
-        f"/api/v1/leads",
+    response = await client.post(
+        lead_prefix,
         json=data,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
@@ -97,11 +110,12 @@ def test_create_lead_failed(client, db_session, auth_token):
 
 
 # TEST GET LEAD BY ID
-def test_get_lead_by_id_success(client, db_session, auth_token):
-    leads = db_session.exec(select(Lead)).all()
+@pytest.mark.asyncio
+async def test_get_lead_by_id_success(client, db_async_session, auth_token):
+    leads = await get_all(db_async_session, Lead)
 
-    response = client.get(
-        f"/api/v1/leads/{leads[0].id}",
+    response = await client.get(
+        f"{lead_prefix}/{leads[0].id}",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -113,9 +127,10 @@ def test_get_lead_by_id_success(client, db_session, auth_token):
     assert "id" in response_json["data"]
 
 
-def test_get_lead_by_wrong_id(client, db_session, auth_token):
-    response = client.get(
-        f"/api/v1/leads/b96da4b9-0000-0000-0000-e807fafc2872",
+@pytest.mark.asyncio
+async def test_get_lead_by_wrong_id(client, auth_token):
+    response = await client.get(
+        f"{lead_prefix}/b96da4b9-0000-0000-0000-e807fafc2872",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -128,9 +143,10 @@ def test_get_lead_by_wrong_id(client, db_session, auth_token):
 
 
 # TEST UPDATE LEAD BY ID
-def test_update_lead_by_id_success(client, db_session, auth_token):
-    leads = db_session.exec(select(Lead)).all()
-    users = db_session.exec(select(User)).all()
+@pytest.mark.asyncio
+async def test_update_lead_by_id_success(client, db_async_session, auth_token):
+    leads = await get_all(db_async_session, Lead)
+    users = await get_all(db_async_session, User)
 
     data = {
         "lead_name": "rawrrrrsss ayaya ashiappp",
@@ -141,8 +157,8 @@ def test_update_lead_by_id_success(client, db_session, auth_token):
         "last_contacted": "2025-11-29"
     }
 
-    response = client.put(
-        f"/api/v1/leads/{leads[0].id}",
+    response = await client.put(
+        f"{lead_prefix}/{leads[0].id}",
         json=data,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
@@ -155,8 +171,9 @@ def test_update_lead_by_id_success(client, db_session, auth_token):
     assert "id" in response_json["data"]
 
 
-def test_update_lead_by_wrong_id(client, db_session, auth_token):
-    users = db_session.exec(select(User)).all()
+@pytest.mark.asyncio
+async def test_update_lead_by_wrong_id(client, db_async_session, auth_token):
+    users = await get_all(db_async_session, User)
 
     data = {
         "lead_name": "rawrrrrsss ayaya ashiappp",
@@ -167,8 +184,8 @@ def test_update_lead_by_wrong_id(client, db_session, auth_token):
         "last_contacted": "2025-11-29"
     }
 
-    response = client.put(
-        f"/api/v1/leads/b96da4b9-0000-0000-0000-e807fafc2872",
+    response = await client.put(
+        f"{lead_prefix}/b96da4b9-0000-0000-0000-e807fafc2872",
         json=data,
         headers={"Authorization": f"Bearer {auth_token}"}
     )
