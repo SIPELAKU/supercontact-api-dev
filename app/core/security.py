@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 
 from app.core import settings
 from app.exceptions import AppException
+from app.models import UserRole
 from app.schemas import ErrorCode
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -35,14 +36,17 @@ def auth_require(credentials: HTTPAuthorizationCredentials = Depends(bearer_sche
     try:
         access_token = credentials.credentials
         payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("user_id")
-        if not user_id:
+        user = payload.get("user")
+        if not user:
             raise AppException(
                 status_code=401,
                 code=ErrorCode.AUTH_REQUIRED,
                 message="Invalid token payload"
             )
-        return UUID(user_id)
+        return {
+            "id": UUID(user["id"]),
+            "role": user["role"],
+        }
 
     except ExpiredSignatureError:
         raise AppException(
@@ -56,3 +60,16 @@ def auth_require(credentials: HTTPAuthorizationCredentials = Depends(bearer_sche
             code=ErrorCode.AUTH_REQUIRED,
             message="Invalid access token"
         )
+
+
+def check_roles(*allowed_roles: UserRole):
+    def depends_auth(user=Depends(auth_require)):
+        if user["role"] not in allowed_roles:
+            raise AppException(
+                status_code=403,
+                code=ErrorCode.FORBIDDEN,
+                message="Forbidden"
+            )
+        return user
+
+    return depends_auth
