@@ -29,7 +29,7 @@ class Pipeline(SQLModel, table=True):
                 DealStage,
                 name="pipeline_deal_stage",
                 native_enum=False,
-                values_callable=lambda enum_cls: [enum for enum in enum_cls],
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
             ),
             nullable=False
         )
