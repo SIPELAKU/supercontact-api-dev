@@ -9,6 +9,10 @@ from passlib.context import CryptContext
 from app.core import settings
 from app.exceptions import AppException
 from app.schemas import ErrorCode
+from fastapi.responses import JSONResponse
+from app.models.user_model import User
+from app.db.session import get_async_session
+from app.db.session import get_async_session
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -56,3 +60,62 @@ def auth_require(credentials: HTTPAuthorizationCredentials = Depends(bearer_sche
             code=ErrorCode.AUTH_REQUIRED,
             message="Invalid access token"
         )
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(pwd_context),
+    db: AsyncSession = Depends(get_async_session),
+):
+    #
+    if isinstance(credentials, JSONResponse):
+        return credentials
+
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "status": "error",
+                    "message": "Unauthorized",
+                    "code": 401
+                }
+            )
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "status": "error",
+                    "message": "Unauthorized",
+                    "code": 401
+                }
+            )
+
+        return user
+
+    except jwt.ExpiredSignatureError:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "status": "error",
+                "message": "Unauthorized",
+                "code": 401
+            }
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "status": "error",
+                "message": "Unauthorized",
+                "code": 401
+            }
+        )
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)

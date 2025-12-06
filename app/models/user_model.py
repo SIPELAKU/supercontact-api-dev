@@ -8,9 +8,9 @@ from sqlalchemy import Column, DateTime, Text, String, Enum, Index
 from sqlmodel import SQLModel, Field, Relationship
 
 
-class UserRole(StrEnum):
-    SALES = "Sales"
-    ADMIN = "Admin"
+# class UserRole(StrEnum):
+#     SALES = "sales"
+#     ADMIN = "admin"
 
 
 class User(SQLModel, table=True):
@@ -21,17 +21,23 @@ class User(SQLModel, table=True):
     fullname: str = Field(sa_column=Column(String(255), nullable=False))
     email: str = Field(sa_column=Column(String(255), unique=True))
     password: str = Field(sa_column=Column(Text, nullable=False))
-    role: UserRole = Field(
-        sa_column=Column(
-            Enum(
-                UserRole,
-                name="user_role_enum",
-                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-                native_enum=False,
-            ),
-            nullable=False
-        )
+    # role: UserRole = Field(
+    #     sa_column=Column(
+    #         Enum(
+    #             UserRole,
+    #             name="user_role_enum",
+    #             values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+    #             native_enum=False,
+    #         ),
+    #         nullable=False
+    #     )
+    # )
+
+    company_name: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True)
     )
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -46,6 +52,7 @@ class User(SQLModel, table=True):
         ),
     )
     leads: List["Lead"] = Relationship(back_populates="user")
+    contacts: List["Contact"] = Relationship(back_populates="user")
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),

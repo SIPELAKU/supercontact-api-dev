@@ -1,22 +1,34 @@
 from datetime import datetime
 from uuid import UUID
+from pydantic import EmailStr
 
 from sqlmodel import SQLModel
-
-from app.models import UserRole
 
 
 class User(SQLModel):
     id: UUID
     fullname: str
-    email: str
-    role: UserRole
+    email: EmailStr
+    # role: UserRole
     created_at: datetime
     updated_at: datetime
 
 
+class UserRegisterRequest(SQLModel):
+    fullname: str
+    email: EmailStr
+    password: str
+    # role: UserRole
+    company_name: str
+
+class UserRegisterResponse(SQLModel):
+    user: User
+
+    class Config:
+        from_attributes = True
+
 class UserLoginRequest(SQLModel):
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -26,3 +38,12 @@ class UserLoginResponse(SQLModel):
 
     class Config:
         from_attributes = True
+
+class ForgotPasswordRequest(SQLModel):
+    email: EmailStr
+
+class ResetPasswordRequest(SQLModel):
+    email: EmailStr
+    new_password: str
+    token: str
+
