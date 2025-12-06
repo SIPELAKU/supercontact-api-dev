@@ -9,5 +9,6 @@ from .lead_schema import (
     LeadGetQuery,
     LeadUpdateStatus
 )
+from .pipeline_schema import PipelineRequest, PipelineGetQuery, PipelineResponse, PipelineUpdateStage
 from .response_schema import ResponseModel
 from .user_schema import UserResponse, UserListResponse
