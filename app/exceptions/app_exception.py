@@ -7,7 +7,13 @@ from app.schemas import ErrorResponse, ErrorCode, ResponseModel
 
 
 class AppException(Exception):
-    def __init__(self, status_code: int, code: ErrorCode, message: str, details: Optional[dict] = None):
+    def __init__(
+        self,
+        status_code: int,
+        code: ErrorCode,
+        message: str,
+        details: Optional[dict] = None,
+    ):
         self.status_code = status_code
         self.code = code
         self.message = message
@@ -21,9 +27,7 @@ async def app_exception_handler(request: Request, exc: AppException):
             success=False,
             data=None,
             error=ErrorResponse(
-                code=exc.code,
-                message=exc.message,
-                details=exc.details
-            )
-        ).model_dump()
+                code=exc.code, message=exc.message, details=exc.details
+            ),
+        ).model_dump(),
     )

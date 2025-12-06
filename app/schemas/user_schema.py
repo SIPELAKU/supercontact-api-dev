@@ -1,27 +1,41 @@
-from datetime import datetime
-from typing import List
+from typing import Optional, List
+from pydantic import BaseModel, EmailStr
 from uuid import UUID
-
-from sqlmodel import SQLModel
-
-from app.models import UserRole
+from app.models.user_model import RoleEnum, StatusEnum
 
 
-class Lead(SQLModel):
-    id: UUID
-    lead_name: str
+class UserBase(BaseModel):
+    fullname: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[RoleEnum] = None
+    status: Optional[StatusEnum] = None
 
 
-class UserResponse(SQLModel):
-    id: UUID
+class UserCreate(BaseModel):
     fullname: str
-    email: str
-    role: UserRole
-    created_at: datetime
-    updated_at: datetime
-    leads: List[Lead]
+    email: EmailStr
+    password: str
+    role: RoleEnum
+    status: StatusEnum
 
 
-class UserListResponse(SQLModel):
+class UserUpdate(BaseModel):
+    fullname: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role: Optional[RoleEnum] = None
+    status: Optional[StatusEnum] = None
+
+
+class UserResponse(UserBase):
+    id: UUID
+    avatar_initial: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedUserResponse(BaseModel):
+    data: List[UserResponse]
     total: int
-    users: List[UserResponse]
+    page: int
+    page_size: int

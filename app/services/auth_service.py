@@ -2,7 +2,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import pwd_context, create_access_token
 from app.exceptions import AppException
-from app.repositories import UserRepository
+from app.repository import UserRepository
 from app.schemas import ErrorCode, UserLoginRequest
 
 
@@ -16,25 +16,16 @@ class AuthService:
 
         if not user:
             raise AppException(
-                status_code=404,
-                code=ErrorCode.NOT_FOUND,
-                message="User not found"
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
             )
 
         # VALIDATION PASSWORD
         validate_password = pwd_context.verify(payload.password, user.password)
         if not validate_password:
             raise AppException(
-                status_code=401,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="Wrong password"
+                status_code=401, code=ErrorCode.AUTH_REQUIRED, message="Wrong password"
             )
 
         # CREATE ACCESS TOKEN
-        access_token = create_access_token({
-            "user": {
-                "id": str(user.id),
-                "role": user.role
-            }
-        })
+        access_token = create_access_token({"user_id": str(user.id)})
         return user, access_token
