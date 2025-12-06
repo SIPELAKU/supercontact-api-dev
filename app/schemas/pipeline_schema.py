@@ -15,12 +15,12 @@ class PipelineUpdateStage(SQLModel):
 
 
 class PipelineGetQuery(SQLModel):
-    page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
-    deal_stage: Optional[DealStage] = Query(None),
-    date_from: Optional[date] = Query(None),
-    date_to: Optional[date] = Query(None),
-    search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1)
+    limit: int = Query(10, ge=1, le=100)
+    deal_stage: Optional[DealStage] = Query(None)
+    date_from: Optional[date] = Query(None)
+    date_to: Optional[date] = Query(None)
+    search: Optional[str] = Query(None)
 
 
 class PipelineRequest(SQLModel):
@@ -50,4 +50,4 @@ class PipelineListResponse(SQLModel):
     total: int
     page: int
     total_pages: int
-    leads: List[PipelineResponse]
+    pipelines: List[PipelineResponse]
