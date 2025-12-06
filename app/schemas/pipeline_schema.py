@@ -1,5 +1,6 @@
 from datetime import date
 from datetime import datetime
+from typing import List
 from typing import Optional
 from uuid import UUID
 
@@ -43,3 +44,10 @@ class PipelineResponse(SQLModel):
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+
+class PipelineListResponse(SQLModel):
+    total: int
+    page: int
+    total_pages: int
+    leads: List[PipelineResponse]
