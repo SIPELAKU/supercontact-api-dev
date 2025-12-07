@@ -12,9 +12,10 @@ from app.db.session import get_async_session
 from app.exceptions import AppException
 from app.schemas import ErrorCode
 from app.models.user_model import User, RoleEnum
+from app.models.user_model import StatusEnum
 
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -35,8 +36,8 @@ def create_access_token(data: dict, expire_minutes: int = ACCESS_TOKEN_EXPIRE_MI
 
     return jwt.encode(
         to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
     )
 
 
@@ -56,8 +57,8 @@ async def auth_require(
         token = credentials.credentials
         payload = jwt.decode(
             token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
         )
 
         user_id = payload.get("user_id")
@@ -76,7 +77,7 @@ async def auth_require(
                 message="User not found",
             )
 
-        if user.status != "active":
+        if user.status != StatusEnum.active:
             raise AppException(
                 status_code=401,
                 code=ErrorCode.AUTH_REQUIRED,

@@ -39,7 +39,7 @@ class User(SQLModel, table=True):
 
     role: RoleEnum = Field(
         sa_column=Column(
-            Enum(RoleEnum, name="user_role_enum", native_enum=False),
+            Enum(RoleEnum, name="role_enum", native_enum=True),
             nullable=False,
         )
     )
@@ -47,7 +47,7 @@ class User(SQLModel, table=True):
     status: StatusEnum = Field(
         default=StatusEnum.active,
         sa_column=Column(
-            Enum(StatusEnum, name="status_enum", native_enum=False),
+            Enum(StatusEnum, name="status_enum", native_enum=True),
             nullable=False,
         ),
     )
