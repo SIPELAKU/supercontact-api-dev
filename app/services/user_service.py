@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 from uuid import UUID
 
 from app.core.security import hash_password, verify_password, create_access_token
@@ -11,14 +10,11 @@ from app.schemas.user_schema import UserCreate, UserUpdate
 
 class UserService:
 
-    def __init__(self, repo: UserRepository | None = None):
-        self.repo = repo or UserRepository()
+    def __init__(self, db: AsyncSession):
+        self.repo = UserRepository(db)
 
-    # --------------------------
-    # AUTH
-    # --------------------------
-    async def authenticate(self, db: AsyncSession, email: str, password: str) -> User:
-        user = await self.repo.get_by_email(db, email)
+    async def authenticate(self, email: str, password: str) -> User:
+        user = await self.repo.get_by_email(email)
 
         if not user or not verify_password(password, user.password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -29,34 +25,44 @@ class UserService:
         data = {
             "user_id": str(user.id),
             "email": user.email,
-            "role": user.role.value,  # Enum → string
+            "role": user.role.value,
         }
         return create_access_token(data)
 
-    # --------------------------
-    # CRUD
-    # --------------------------
-    async def get_all(self, db: AsyncSession):
-        result = await db.exec(select(User))
-        return result.scalars().all()
-
-    async def find_by_id(self, db: AsyncSession, user_id: UUID):
-        user = await self.repo.get_by_id(db, user_id)
+    async def find_by_id(self, user_id: UUID):
+        user = await self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
         return user
 
-    async def list_users(self, db: AsyncSession, search, role, status, page, page_size):
-        skip = (page - 1) * page_size
+    async def list_users(
+        self,
+        search: str | None,
+        role: RoleEnum | None,
+        status: StatusEnum | None,
+        page: int,
+        limit: int,
+    ):
+        skip = (page - 1) * limit
 
         users, total = await self.repo.list_users(
-            db, search, role, status, skip, page_size
+            search=search,
+            role=role,
+            status=status,
+            skip=skip,
+            limit=limit,
         )
 
-        return {"data": users, "total": total, "page": page, "page_size": page_size}
+        return {
+            "items": users,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+        }
 
-    async def create(self, db: AsyncSession, req: UserCreate):
-        existing = await self.repo.get_by_email(db, req.email)
+    async def create(self, req: UserCreate):
+        existing = await self.repo.get_by_email(req.email)
         if existing:
             raise HTTPException(400, "Email already registered")
 
@@ -71,15 +77,15 @@ class UserService:
             status=req.status or StatusEnum.active,
         )
 
-        return await self.repo.create(db, user)
+        return await self.repo.create(user)
 
-    async def update(self, db: AsyncSession, user_id: UUID, req: UserUpdate):
-        user = await self.repo.get_by_id(db, user_id)
+    async def update(self, user_id: UUID, req: UserUpdate):
+        user = await self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
 
         if req.email and req.email != user.email:
-            if await self.repo.get_by_email(db, req.email):
+            if await self.repo.get_by_email(req.email):
                 raise HTTPException(400, "Email already taken")
             user.email = req.email
 
@@ -96,12 +102,12 @@ class UserService:
         if req.status:
             user.status = req.status
 
-        return await self.repo.update(db, user)
+        return await self.repo.update(user)
 
-    async def delete(self, db: AsyncSession, user_id: UUID):
-        user = await self.repo.get_by_id(db, user_id)
+    async def delete(self, user_id: UUID):
+        user = await self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
 
-        await self.repo.delete(db, user)
+        await self.repo.delete(user)
         return {"message": "User deleted successfully"}
