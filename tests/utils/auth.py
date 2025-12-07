@@ -1,8 +1,10 @@
 async def authenticate_test_user(client):
     response = await client.post("/api/v1/auth/login", json={
-        "email": "admin",
+        "email": "admin@example.com",
         "password": "admin"
     })
 
     assert response.status_code == 200
-    return response.json()["data"]["access_token"]
+    result = response.json()
+
+    return result["data"]["access_token"]

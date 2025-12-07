@@ -16,7 +16,7 @@ async def seed_leads_test(db: AsyncSession):
             source=LeadSource.WEB_FORM,
             contact=f"testing {i}",
             status=LeadStatus.PROPOSAL,
-            assigned_to=users[1].id,
+            assigned_to=users[0].id,
             last_contacted=date(2025, 12, 12),
         )
         db.add(lead)

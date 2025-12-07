@@ -1,39 +1,40 @@
 import pytest
-from app.repository.user_repository import UserRepository
-from app.models.user_model import User, RoleEnum, StatusEnum
+
+from app.models import User, UserRole, UserStatus
+from app.repositories import UserRepository
+from app.schemas import UserGetQuery
 
 
 @pytest.mark.asyncio
-async def test_create_user(db):
-    repo = UserRepository()
+async def test_create_user(db_async_session):
+    repo = UserRepository(db_async_session)
 
     user = User(
         fullname="John Doe",
         email="john@example.com",
         password="hashedpass",
-        role=RoleEnum.ADMIN,
-        status=StatusEnum.active,
+        role=UserRole.ADMIN,
+        status=UserStatus.ACTIVE,
     )
 
-    saved_user = await repo.create(db, user)
+    saved_user = await repo.create(user)
 
     assert saved_user.id is not None
     assert saved_user.email == "john@example.com"
 
 
 @pytest.mark.asyncio
-async def test_list_users_search_filter(db):
-    repo = UserRepository()
+async def test_list_users_search_filter(db_async_session):
+    repo = UserRepository(db_async_session)
 
     users_data = [
-        ("John Doe", "john@example.com", RoleEnum.ADMIN, StatusEnum.active),
-        ("Jane Smith", "jane@example.com", RoleEnum.TENANT_ADMIN, StatusEnum.inactive),
-        ("Alice", "alice@example.com", RoleEnum.TENANT_ADMIN, StatusEnum.active),
+        ("John Doe", "john@example.com", UserRole.ADMIN, UserStatus.ACTIVE),
+        ("Jane Smith", "jane@example.com", UserRole.TENANT_ADMIN, UserStatus.INACTIVE),
+        ("Alice", "alice@example.com", UserRole.TENANT_ADMIN, UserStatus.ACTIVE),
     ]
 
     for fullname, email, role, status in users_data:
         await repo.create(
-            db,
             User(
                 fullname=fullname,
                 email=email,
@@ -43,28 +44,27 @@ async def test_list_users_search_filter(db):
             ),
         )
 
-    users, total = await repo.list_users(db, "Jane", None, None, 0, 10)
+    users, total = await repo.list_users(query_params=UserGetQuery(search="Jane"))
 
     assert total == 1
     assert users[0].email == "jane@example.com"
 
 
 @pytest.mark.asyncio
-async def test_delete_user(db):
-    repo = UserRepository()
+async def test_delete_user(db_async_session):
+    repo = UserRepository(db_async_session)
 
     user = await repo.create(
-        db,
         User(
             fullname="Test",
             email="test@example.com",
             password="pass",
-            role=RoleEnum.ADMIN,
-            status=StatusEnum.active,
+            role=UserRole.ADMIN,
+            status=UserStatus.ACTIVE,
         ),
     )
 
-    await repo.delete(db, user)
+    await repo.delete(user)
 
-    deleted = await repo.get_by_id(db, user.id)
+    deleted = await repo.get_by_id(user.id)
     assert deleted is None

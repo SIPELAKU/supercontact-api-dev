@@ -17,8 +17,8 @@ class UserRole(StrEnum):
 
 
 class UserStatus(StrEnum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
 
 
 def utc_now():
@@ -53,7 +53,9 @@ class User(SQLModel, table=True):
             Enum(
                 UserStatus,
                 name="status_enum",
-                native_enum=True),
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+                native_enum=False
+            ),
             nullable=False,
         ),
     )

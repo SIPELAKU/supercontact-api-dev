@@ -1,6 +1,15 @@
 import pytest
+from sqlalchemy import select
+
+from app.models import User
 
 user_prefix = "/api/v1/users"
+
+
+@pytest.mark.asyncio
+async def test_users(db_async_session):
+    users = await db_async_session.scalars(select(User))
+    print(users.all())
 
 
 @pytest.mark.asyncio

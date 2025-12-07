@@ -19,9 +19,9 @@ async def test_get_all_leads_success(client, auth_token):
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
-    assert response.status_code == 200
     response_json = response.json()
 
+    assert response.status_code == 200
     assert "leads" in response_json["data"]
     assert "total" in response_json["data"]
     assert "id" in response_json["data"]["leads"][0]

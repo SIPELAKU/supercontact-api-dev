@@ -1,22 +1,22 @@
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core import pwd_context
-from app.models import User, UserRole
+from app.core import hash_password
+from app.models import User, UserRole, UserStatus
 
 
 async def seed_users_test(db: AsyncSession):
-    user_seeds = [
-        {"fullname": "admin", "email": "admin", "password": pwd_context.hash("admin"), "role": UserRole.ADMIN},
-        {"fullname": "admin2", "email": "admin2", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin3", "email": "admin3", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin4", "email": "admin4", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin5", "email": "admin5", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-    ]
-    for user in user_seeds:
-        user = User(**user)
-        db.add(user)
+    user = User(
+        fullname="admin",
+        email="admin@example.com",
+        password=hash_password("admin"),
+        role=UserRole.ADMIN,
+        status=UserStatus.ACTIVE,
+        avatar_initial="AD"
+    )
+    db.add(user)
     try:
-        await db.commit()
+        await db.commit()  # wajib commit supaya session aware
+        await db.refresh(user)
     except IntegrityError:
         await db.rollback()

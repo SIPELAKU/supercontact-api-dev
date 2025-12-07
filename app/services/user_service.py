@@ -74,7 +74,7 @@ class UserService:
             user.email = req.email
 
         if req.fullname:
-            user.fullname = req.uvifullname
+            user.fullname = req.fullname
             user.avatar_initial = req.fullname[:2].upper()
 
         if req.password:

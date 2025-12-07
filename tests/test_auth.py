@@ -6,7 +6,7 @@ auth_prefix = "/api/v1/auth"
 @pytest.mark.asyncio
 async def test_login_success(client):
     response = await client.post(f"{auth_prefix}/login", json={
-        "email": "admin",
+        "email": "admin@example.com",
         "password": "admin"
     })
 
@@ -21,7 +21,7 @@ async def test_login_success(client):
 @pytest.mark.asyncio
 async def test_login_user_not_found(client):
     response = await client.post(f"{auth_prefix}/login", json={
-        "email": "salah",
+        "email": "salah@example.com",
         "password": "admin"
     })
 
@@ -36,7 +36,7 @@ async def test_login_user_not_found(client):
 @pytest.mark.asyncio
 async def test_login_wrong_password(client):
     response = await client.post(f"{auth_prefix}/login", json={
-        "email": "admin",
+        "email": "admin@example.com",
         "password": "salah"
     })
 
