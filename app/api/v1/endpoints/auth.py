@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db import get_async_session
+from app.db.session import get_async_session
 from app.schemas import UserLoginResponse, UserLoginRequest, ResponseModel
 from app.services import AuthService
 
@@ -12,9 +12,10 @@ def get_auth_service(db: AsyncSession = Depends(get_async_session)):
     return AuthService(db)
 
 
-# USER LOGIN
 @router.post("/login", response_model=ResponseModel[UserLoginResponse])
-async def user_login(payload: UserLoginRequest, service: AuthService = Depends(get_auth_service)):
+async def user_login(
+        payload: UserLoginRequest, service: AuthService = Depends(get_auth_service)
+):
     user, access_token = await service.login(payload)
     return ResponseModel(
         data=UserLoginResponse(

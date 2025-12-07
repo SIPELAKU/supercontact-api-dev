@@ -17,4 +17,9 @@ from .pipeline_schema import (
     PipelineListResponse
 )
 from .response_schema import ResponseModel
-from .user_schema import UserResponse, UserListResponse
+from .user_schema import (
+    UserCreateRequest,
+    UserUpdateRequest,
+    UserResponse,
+    UserGetQuery
+)

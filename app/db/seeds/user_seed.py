@@ -2,20 +2,25 @@ import asyncio
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.security import pwd_context
-from app.db.session import get_async_session
-from app.models.user_model import UserRole, User
+from app.core import hash_password
+from app.db import get_async_session
+from app.models import UserStatus, UserRole, User
 
 
 async def seed_users():
     db_gen = get_async_session()
     db = await anext(db_gen)
     user_seed = [
-        {"fullname": "admin", "email": "admin", "password": pwd_context.hash("admin"), "role": UserRole.ADMIN},
-        {"fullname": "admin2", "email": "admin2", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin3", "email": "admin3", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin4", "email": "admin4", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
-        {"fullname": "admin5", "email": "admin5", "password": pwd_context.hash("admin"), "role": UserRole.SALES},
+        {"fullname": "admin", "email": "admin@test.com", "password": hash_password("admin"), "role": UserRole.ADMIN,
+         "status": UserStatus.ACTIVE, "avatar_initial": "AD"},
+        {"fullname": "admin2", "email": "admin2@test.com", "password": hash_password("admin"), "role": UserRole.SALES,
+         "status": UserStatus.ACTIVE, "avatar_initial": "AD"},
+        {"fullname": "admin3", "email": "admin3@test.com", "password": hash_password("admin"), "role": UserRole.SALES,
+         "status": UserStatus.ACTIVE, "avatar_initial": "AD"},
+        {"fullname": "admin4", "email": "admin4@test.com", "password": hash_password("admin"), "role": UserRole.SALES,
+         "status": UserStatus.ACTIVE, "avatar_initial": "AD"},
+        {"fullname": "admin5", "email": "admin5@test.com", "password": hash_password("admin"), "role": UserRole.SALES,
+         "status": UserStatus.ACTIVE, "avatar_initial": "AD"},
     ]
 
     for user in user_seed:

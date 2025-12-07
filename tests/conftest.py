@@ -1,69 +1,36 @@
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+import asyncio
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-from app.db.session import get_async_session
-from app.main import app
-from tests.db import seed_all_test
-from tests.utils.auth import authenticate_test_user
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-DATABASE_TEST_URL = "sqlite+aiosqlite:///tests/db/db_test.db"
-async_engine = create_async_engine(
-    DATABASE_TEST_URL,
-    echo=False,
-    future=True,
-)
+engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
 
-async_session_maker = async_sessionmaker(
+TestingSessionLocal = sessionmaker(
+    bind=engine,
     class_=AsyncSession,
-    autocommit=False,
-    autoflush=False,
-    bind=async_engine,
+    expire_on_commit=False,
 )
 
 
-@pytest_asyncio.fixture
-async def db_async_session():
-    # create tables
-    async with async_engine.begin() as conn:
+@pytest.fixture(scope="function")
+async def db():
+    async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    # session
-    async with async_session_maker() as session:
-        await seed_all_test(session)
+    async with TestingSessionLocal() as session:
         yield session
+        await session.rollback()
 
-    # drop tables
-    async with async_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
 
 
-async def override_get_async_session():
-    async with async_session_maker() as session:
-        yield session
-
-
-@pytest_asyncio.fixture
-async def client(db_async_session):
-    # override dependency session
-    app.dependency_overrides[get_async_session] = override_get_async_session
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-
-@pytest_asyncio.fixture
-async def auth_token(client):
-    return await authenticate_test_user(client)
-
-
-@pytest.fixture
-def hello():
-    def _say(name: str):
-        return f"Hello {name}"
-
-    return _say
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()

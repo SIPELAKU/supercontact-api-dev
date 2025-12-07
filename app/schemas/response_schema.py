@@ -12,6 +12,4 @@ class ResponseModel(BaseModel, Generic[T]):
     data: Optional[T] = None
     error: Optional[ErrorResponse] = None
 
-    model_config = {
-        "arbitrary_types_allowed": True
-    }
+    model_config = {"arbitrary_types_allowed": True}

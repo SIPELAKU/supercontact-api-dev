@@ -23,13 +23,7 @@ app.add_middleware(
 
 @app.get("/", tags=["Root"])
 def root():
-    return {
-        "success": True,
-        "data": {
-            "message": "Server is running!"
-        },
-        "errors": None
-    }
+    return {"success": True, "data": {"message": "Server is running!"}, "errors": None}
 
 
 # ERROR HANDLER FOR AppException (404, 403, dll)
@@ -46,9 +40,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             error=ErrorResponse(
                 code=ErrorCode.VALIDATION_ERROR,
                 message="Invalid request data",
-                details={"errors": exc.errors()}
-            )
-        ).model_dump()
+                details={"errors": exc.errors()},
+            ),
+        ).model_dump(),
     )
 
 
@@ -60,11 +54,9 @@ async def generic_exception_handler(request: Request, exc: Exception):
         content=ResponseModel(
             success=False,
             error=ErrorResponse(
-                code=ErrorCode.SERVER_ERROR,
-                message=str(exc),
-                details={}
-            )
-        ).model_dump()
+                code=ErrorCode.SERVER_ERROR, message=str(exc), details={}
+            ),
+        ).model_dump(),
     )
 
 
