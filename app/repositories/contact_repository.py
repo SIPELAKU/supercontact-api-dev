@@ -1,7 +1,8 @@
 from uuid import UUID
-from sqlalchemy.orm import selectinload
+
 from sqlmodel import select, func, asc, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.contact_model import Contact, ContactNote, ContactTask
 
 
@@ -15,7 +16,7 @@ class ContactRepository:
         await self.db.refresh(contact)
         return contact
 
-    async def get_by_id(self, user_id: int, contact_id: int):
+    async def get_by_id(self, user_id: UUID, contact_id: UUID):
         query = (
             select(Contact)
             .where(
@@ -25,7 +26,7 @@ class ContactRepository:
         )
         return await self.db.scalar(query)
 
-    async def get_all(self, user_id: int, query):
+    async def get_all(self, user_id: UUID, query):
         q = select(Contact).where(Contact.user_id == user_id)
 
         if query.search:

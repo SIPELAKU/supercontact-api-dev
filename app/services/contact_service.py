@@ -1,13 +1,15 @@
 from math import ceil
 from uuid import UUID
-from app.models.contact_model import Contact, ContactNote, ContactTask
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.exceptions.app_exception import AppException, ErrorCode
+from app.models.contact_model import Contact
 from app.repositories.contact_repository import ContactRepository
 from app.schemas.contact_schema import (
     ContactCreate, ContactUpdate,
     NoteCreate, TaskCreate
 )
-from app.exceptions.app_exception import AppException, ErrorCode
 
 
 class ContactService:
@@ -56,7 +58,7 @@ class ContactService:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
-                message="COntact not found"
+                message="Contact not found"
             )
         return await self.repo.delete(contact)
 
@@ -85,7 +87,7 @@ class ContactService:
         if not contact:
             raise AppException(
                 status_code=404,
-                code=ErrorCode.NOTFOUND,
+                code=ErrorCode.NOT_FOUND,
                 message="Contact not found"
             )
         return await self.repo.create_task(contact_id, data)
