@@ -67,3 +67,6 @@ class UserRepository:
     async def get_all(self):
         result = await self.db.execute(select(User))
         return result.scalars().all()
+
+    async def get_total(self):
+        return await self.db.scalar(select(func.count()).select_from(User))

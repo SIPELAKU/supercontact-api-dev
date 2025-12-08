@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class ErrorCode(StrEnum):
+    BAD_REQUEST = "BAD_REQUEST" 
     VALIDATION_ERROR = "VALIDATION_ERROR"  # Validasi data request salah
     AUTH_REQUIRED = "AUTH_REQUIRED"  # Token tidak ditemukan
     FORBIDDEN = "FORBIDDEN"  # Role tidak cukup

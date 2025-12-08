@@ -59,7 +59,10 @@ class User(SQLModel, table=True):
             nullable=False,
         ),
     )
-
+    company_name: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True)
+    )
     avatar_initial: Optional[str] = Field(
         default=None,
         sa_column=Column(String(255), nullable=True),
@@ -84,6 +87,7 @@ class User(SQLModel, table=True):
         ),
     )
     leads: List["Lead"] = Relationship(back_populates="user")
+    contacts: List["Contact"] = Relationship(back_populates="user")
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),

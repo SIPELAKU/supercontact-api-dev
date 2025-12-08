@@ -1,4 +1,18 @@
-from .auth_schema import UserLoginRequest, UserLoginResponse
+from .auth_schema import (
+    UserLoginRequest,
+    UserLoginResponse,
+    UserRegisterResponse,
+    UserRegisterRequest,
+)
+from .contact_schema import (
+    ContactResponse,
+    NoteCreate,
+    NoteResponse,
+    TaskCreate,
+    TaskResponse,
+    DeleteResponse,
+    ContactResponse,
+)
 from .error_schema import ErrorCode, ErrorResponse
 from .lead_schema import (
     LeadResponse,

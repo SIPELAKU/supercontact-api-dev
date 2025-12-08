@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.exceptions import AppException
-from app.models import User, UserRole, UserStatus
+from app.models import UserRole, UserStatus
+from app.models.user_model import User
 from app.schemas import ErrorCode
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -47,7 +48,7 @@ def create_access_token(data: dict, expire_minutes: int = ACCESS_TOKEN_EXPIRE_MI
 async def auth_require(
         credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
         db: AsyncSession = Depends(get_db_session),
-) -> User:
+):
     if not credentials:
         raise AppException(
             status_code=401,

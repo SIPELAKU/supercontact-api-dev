@@ -4,7 +4,8 @@ from app.core import verify_password, create_access_token
 from app.exceptions import AppException
 from app.models import User
 from app.repositories import UserRepository
-from app.schemas import ErrorCode, UserLoginRequest
+from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest
+from app.schemas.error_schema import ErrorCode
 
 
 class AuthService:
@@ -19,6 +20,28 @@ class AuthService:
             "role": user.role.value,
         }
         return create_access_token(data)
+
+    async def register(self, payload: UserRegisterRequest):
+        # VALIDATION IF EMAIL ALREADY EXISTS
+        user = await self.repo.get_by_email(email=payload.email)
+
+        if user:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Email already registered"
+            )
+
+        # CREATE NEW USER
+        new_user = await self.repo.create({
+            "fullname": payload.fullname,
+            "email": payload.email,
+            "password": hash_password(payload.password),
+            # "role": payload.role,
+            "company_name": payload.company_name
+        })
+
+        return new_user
 
     async def login(self, payload: UserLoginRequest):
         # VALIDATION IF USER EXISTING
