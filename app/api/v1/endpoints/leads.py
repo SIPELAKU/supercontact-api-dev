@@ -5,9 +5,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core import check_roles
+from app.core import auth_require
 from app.db import get_async_session
-from app.models import LeadStatus, LeadSource, UserRole
+from app.models import LeadStatus, LeadSource
 from app.schemas import (
     LeadRequest,
     LeadResponse,
@@ -31,7 +31,7 @@ def get_lead_service(db: AsyncSession = Depends(get_async_session)):
 @router.post(
     "",
     response_model=ResponseModel[LeadResponse],
-    dependencies=[Depends(check_roles(UserRole.ADMIN, UserRole.SALES))]
+    dependencies=[Depends(auth_require)]
 )
 async def create_lead(payload: LeadRequest, service: LeadService = Depends(get_lead_service)):
     data = await service.create_lead(payload)
@@ -42,7 +42,7 @@ async def create_lead(payload: LeadRequest, service: LeadService = Depends(get_l
 @router.get(
     "",
     response_model=ResponseModel[LeadListResponse],
-    dependencies=[Depends(check_roles(UserRole.ADMIN, UserRole.SALES))]
+    dependencies=[Depends(auth_require)]
 )
 async def get_all_leads(
         page: int = Query(1, ge=1),
@@ -77,7 +77,7 @@ async def get_all_leads(
 @router.get(
     "/{lead_id}",
     response_model=ResponseModel[LeadResponse],
-    dependencies=[Depends(check_roles(UserRole.ADMIN, UserRole.SALES))]
+    dependencies=[Depends(auth_require)]
 )
 async def get_lead_by_id(lead_id: UUID, service: LeadService = Depends(get_lead_service)):
     data = await service.find_one_lead(lead_id)
@@ -88,7 +88,7 @@ async def get_lead_by_id(lead_id: UUID, service: LeadService = Depends(get_lead_
 @router.put(
     "/{lead_id}",
     response_model=ResponseModel[LeadResponse],
-    dependencies=[Depends(check_roles(UserRole.ADMIN, UserRole.SALES))]
+    dependencies=[Depends(auth_require)]
 )
 async def update_lead_by_id(lead_id: UUID, payload: LeadRequest, service: LeadService = Depends(get_lead_service)):
     data = await service.update_lead(lead_id, payload)
@@ -99,7 +99,7 @@ async def update_lead_by_id(lead_id: UUID, payload: LeadRequest, service: LeadSe
 @router.patch(
     "/{lead_id}/status",
     response_model=ResponseModel[LeadResponse],
-    dependencies=[Depends(check_roles(UserRole.ADMIN, UserRole.SALES))]
+    dependencies=[Depends(auth_require)]
 )
 async def update_lead_status_by_id(
         lead_id: UUID,

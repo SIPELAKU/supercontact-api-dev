@@ -17,7 +17,6 @@ class AuthService:
         data = {
             "user_id": str(user.id),
             "email": user.email,
-            "role": user.role.value,
         }
         return create_access_token(data)
 
@@ -37,7 +36,6 @@ class AuthService:
             "fullname": payload.fullname,
             "email": payload.email,
             "password": hash_password(payload.password),
-            # "role": payload.role,
             "company_name": payload.company_name
         })
 

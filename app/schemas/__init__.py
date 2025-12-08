@@ -5,15 +5,15 @@ from .auth_schema import (
     UserRegisterRequest,
 )
 from .contact_schema import (
-    ContactRequest,
-    ContactDetailEditRequest,
-    ContactListResponse,
+    ContactCreate,
+    ContactUpdate,
+    PaginatedContacts,
     ContactResponse,
     NoteCreate,
     NoteResponse,
     TaskCreate,
     TaskResponse,
-    ContactResponse,
+    DeleteResponse
 )
 from .error_schema import ErrorCode, ErrorResponse
 from .lead_schema import (

@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions.app_exception import AppException, ErrorCode
 from app.models.contact_model import Contact
 from app.repositories.contact_repository import ContactRepository
-from app.schemas import (
-    NoteCreate, TaskCreate, ContactRequest
+from app.schemas.contact_schema import (
+    ContactCreate, ContactUpdate,
+    NoteCreate, TaskCreate
 )
 
 
@@ -15,7 +16,7 @@ class ContactService:
     def __init__(self, db: AsyncSession):
         self.repo = ContactRepository(db)
 
-    async def create_contact(self, user_id: UUID, data: ContactRequest):
+    async def create_contact(self, user_id: UUID, data: ContactCreate):
         contact = await self.repo.create(Contact(user_id=user_id, **data.model_dump()))
         return contact
 
@@ -41,7 +42,7 @@ class ContactService:
             )
         return contact
 
-    async def update_contact(self, user_id: UUID, contact_id: UUID, data: ContactRequest):
+    async def update_contact(self, user_id: UUID, contact_id: UUID, data: ContactUpdate):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -57,7 +58,7 @@ class ContactService:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
-                message="Contact not found"
+                message="COntact not found"
             )
         return await self.repo.delete(contact)
 
@@ -86,7 +87,7 @@ class ContactService:
         if not contact:
             raise AppException(
                 status_code=404,
-                code=ErrorCode.NOT_FOUND,
+                code=ErrorCode.NOTFOUND,
                 message="Contact not found"
             )
         return await self.repo.create_task(contact_id, data)

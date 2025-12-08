@@ -1,8 +1,9 @@
+from datetime import date
+from typing import Optional, List
+from uuid import UUID, uuid4
+
 from sqlalchemy import Column, String, Date, Text
 from sqlmodel import Relationship, SQLModel, Field
-from uuid import UUID, uuid4
-from typing import Optional, List
-from datetime import date
 
 
 class Contact(SQLModel, table=True):
@@ -13,10 +14,10 @@ class Contact(SQLModel, table=True):
 
     name: str = Field(sa_column=Column(String(255), nullable=False))
     email: str = Field(sa_column=Column(String(255), nullable=False, unique=True))
-    phone: str = Field(sa_column=Column(String(30), nullable=False))
     company: str = Field(sa_column=Column(String(30), nullable=False))
-    job_title: str = Field(sa_column=Column(String(30), nullable=False))
-    address: str = Field(sa_column=Column(Text(), nullable=False))
+    phone: Optional[str] = Field(sa_column=Column(String(30), nullable=True))
+    job_title: Optional[str] = Field(sa_column=Column(String(30), nullable=True))
+    address: Optional[str] = Field(sa_column=Column(Text(), nullable=True))
 
     user: Optional["User"] = Relationship(back_populates="contacts")
 
@@ -69,4 +70,3 @@ class ContactNote(SQLModel, table=True):
         back_populates="notes",
         sa_relationship_kwargs={"foreign_keys": "[ContactNote.contact_id]"}
     )
-

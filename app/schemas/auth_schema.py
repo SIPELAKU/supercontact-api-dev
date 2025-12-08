@@ -22,7 +22,6 @@ class UserRegisterRequest(SQLModel):
     fullname: str
     email: EmailStr
     password: str
-    # role: UserRole
     company_name: str
 
 
