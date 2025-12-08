@@ -66,20 +66,20 @@ class ContactRepository:
         await self.db.commit()
         return True
 
-    async def create_note(self, contact_id: int, data):
+    async def create_note(self, contact_id: UUID, data):
         note = ContactNote(contact_id=contact_id, note=data.note)
         self.db.add(note)
         await self.db.commit()
         await self.db.refresh(note)
         return note
 
-    async def get_notes(self, contact_id: int):
+    async def get_notes(self, contact_id: UUID):
         result = await self.db.scalars(
             select(ContactNote).where(ContactNote.contact_id == contact_id)
         )
         return result.all()
 
-    async def create_task(self, contact_id: int, data):
+    async def create_task(self, contact_id: UUID, data):
         task = ContactTask(
             contact_id=contact_id,
             task_name=data.task_name,
@@ -92,7 +92,7 @@ class ContactRepository:
         await self.db.refresh(task)
         return task
 
-    async def get_tasks(self, contact_id: int):
+    async def get_tasks(self, contact_id: UUID):
         result = await self.db.scalars(
             select(ContactTask).where(ContactTask.contact_id == contact_id)
         )

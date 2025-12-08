@@ -6,9 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions.app_exception import AppException, ErrorCode
 from app.models.contact_model import Contact
 from app.repositories.contact_repository import ContactRepository
-from app.schemas.contact_schema import (
-    ContactCreate, ContactUpdate,
-    NoteCreate, TaskCreate
+from app.schemas import (
+    NoteCreate, TaskCreate, ContactRequest
 )
 
 
@@ -16,7 +15,7 @@ class ContactService:
     def __init__(self, db: AsyncSession):
         self.repo = ContactRepository(db)
 
-    async def create_contact(self, user_id: UUID, data: ContactCreate):
+    async def create_contact(self, user_id: UUID, data: ContactRequest):
         contact = await self.repo.create(Contact(user_id=user_id, **data.model_dump()))
         return contact
 
@@ -32,7 +31,7 @@ class ContactService:
             "data": contacts
         }
 
-    async def find_one_contact(self, user_id: UUID, contact_id: int):
+    async def find_one_contact(self, user_id: UUID, contact_id: UUID):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -42,7 +41,7 @@ class ContactService:
             )
         return contact
 
-    async def update_contact(self, user_id: int, contact_id: int, data: ContactUpdate):
+    async def update_contact(self, user_id: UUID, contact_id: UUID, data: ContactRequest):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -52,7 +51,7 @@ class ContactService:
             )
         return await self.repo.update(contact, data)
 
-    async def delete_contact(self, user_id: int, contact_id: int):
+    async def delete_contact(self, user_id: UUID, contact_id: UUID):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -62,7 +61,7 @@ class ContactService:
             )
         return await self.repo.delete(contact)
 
-    async def create_note(self, user_id: int, contact_id: int, data: NoteCreate):
+    async def create_note(self, user_id: UUID, contact_id: UUID, data: NoteCreate):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -72,7 +71,7 @@ class ContactService:
             )
         return await self.repo.create_note(contact_id, data)
 
-    async def get_notes(self, user_id: int, contact_id: int):
+    async def get_notes(self, user_id: UUID, contact_id: UUID):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -82,7 +81,7 @@ class ContactService:
             )
         return await self.repo.get_notes(contact_id)
 
-    async def create_task(self, user_id: int, contact_id: int, data: TaskCreate):
+    async def create_task(self, user_id: UUID, contact_id: UUID, data: TaskCreate):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -92,7 +91,7 @@ class ContactService:
             )
         return await self.repo.create_task(contact_id, data)
 
-    async def get_tasks(self, user_id: int, contact_id: int):
+    async def get_tasks(self, user_id: UUID, contact_id: UUID):
         contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
         if not contact:
             raise AppException(

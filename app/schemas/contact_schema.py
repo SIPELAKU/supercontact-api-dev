@@ -1,19 +1,28 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import SQLModel
 
 
+class ContactRequest(SQLModel):
+    name: str
+    email: EmailStr
+    company: str
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
+    address: Optional[str] = None
+
+
 class ContactResponse(SQLModel):
     id: UUID
     name: str
     email: EmailStr
-    phone: str
     company: str
-    job_title: str
-    address: str
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
+    address: Optional[str] = None
 
 
 class ContactListResponse(SQLModel):
@@ -24,20 +33,6 @@ class ContactListResponse(SQLModel):
 
     class Config:
         from_attributes = True
-
-
-class ContactRequest(SQLModel):
-    name: str
-    email: EmailStr
-    phone: str
-    company: str
-    job_title: str
-    address: str
-
-
-class DeleteResponse(SQLModel):
-    status: str
-    message: str
 
 
 class NoteCreate(SQLModel):
