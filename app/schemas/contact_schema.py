@@ -9,10 +9,10 @@ from sqlmodel import SQLModel
 class ContactBase(SQLModel):
     name: str
     email: EmailStr
-    phone: str
     company: str
-    job_title: str
-    address: str
+    phone: Optional[str]
+    job_title: Optional[str]
+    address: Optional[str]
 
 
 class ContactResponse(ContactBase):

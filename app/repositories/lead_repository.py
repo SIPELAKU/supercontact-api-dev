@@ -17,34 +17,37 @@ class LeadRepository:
     async def get_by_assigned_to(self, assigned_to: UUID):
         return await self.db.get(User, assigned_to)
 
-    async def create(self, lead: Lead):
+    async def create(self, payload: LeadRequest, load_user: bool = False, load_contact: bool = False):
+        lead = Lead(**payload.model_dump())
         self.db.add(lead)
         await self.db.commit()
         await self.db.refresh(lead)
-        return lead
+        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
 
     async def get_by_id(self, lead_id: UUID, load_user: bool = False, load_contact: bool = False):
         query = select(Lead).where(Lead.id == lead_id)
         if load_user:
             query = query.options(selectinload(Lead.user))
         if load_contact:
-            query = query.options(selectinload(Lead.))
+            query = query.options(selectinload(Lead.contact))
         return await self.db.scalar(query)
 
-    async def get_all(self, query_params: LeadGetQuery, load_user: bool = False):
+    async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
         query = select(Lead)
 
         # Load User Relationship
         if load_user:
             query = query.options(selectinload(Lead.user))
+        if load_contact:
+            query = query.options(selectinload(Lead.contact))
 
         # FILTERING
-        if query_params.status:
-            query = query.where(Lead.status.in_(query_params.status))
-        if query_params.source:
-            query = query.where(Lead.source.in_(query_params.source))
+        if query_params.lead_status:
+            query = query.where(Lead.lead_status == query_params.lead_status)
+        if query_params.lead_source:
+            query = query.where(Lead.lead_source == query_params.lead_source)
         if query_params.assigned_to:
-            query = query.where(Lead.assigned_to.in_(query_params.assigned_to))
+            query = query.where(Lead.assigned_to == query_params.assigned_to)
 
         # DATE RANGE
         if query_params.date_from:
@@ -56,13 +59,11 @@ class LeadRepository:
         if query_params.search:
             query = query.where(Lead.lead_name.ilike(f"%{query_params.search}%"))
 
-        # SORTING BY LAST_CONTACTED OR CREATED_AT
-        sort_column = getattr(Lead, query_params.sort_by)
+        # SORTING BY CREATED_AT
         if query_params.sort_order == "desc":
-            sort_column = sort_column.desc()
+            query = query.order_by(Lead.created_at.desc())
         else:
-            sort_column = sort_column.asc()
-        query = query.order_by(sort_column)
+            query = query.order_by(Lead.created_at.asc())
 
         total_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(total_query)
@@ -74,7 +75,7 @@ class LeadRepository:
 
         return leads, total
 
-    async def update(self, lead: Lead, payload: LeadRequest, load_user: bool = False):
+    async def update(self, lead: Lead, payload: LeadRequest, load_user: bool = False, load_contact: bool = False):
         update_data = payload.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
@@ -84,13 +85,19 @@ class LeadRepository:
         await self.db.commit()
         await self.db.refresh(lead)
 
-        return await self.get_by_id(lead_id=lead.id, load_user=load_user)
+        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
 
-    async def update_status(self, lead: Lead, payload: LeadUpdateStatus, load_user: bool = False):
-        lead.status = payload.lead_status
+    async def update_status(
+            self,
+            lead: Lead,
+            payload: LeadUpdateStatus,
+            load_user: bool = False,
+            load_contact: bool = False
+    ):
+        lead.lead_status = payload.lead_status
         lead.updated_at = datetime.now(timezone.utc)
 
         await self.db.commit()
         await self.db.refresh(lead)
 
-        return await self.get_by_id(lead_id=lead.id, load_user=load_user)
+        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
