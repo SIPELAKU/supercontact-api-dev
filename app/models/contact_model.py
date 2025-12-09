@@ -14,12 +14,13 @@ class Contact(SQLModel, table=True):
 
     name: str = Field(sa_column=Column(String(255), nullable=False))
     email: str = Field(sa_column=Column(String(255), nullable=False, unique=True))
-    company: str = Field(sa_column=Column(String(30), nullable=False))
+    company: str = Field(sa_column=Column(String(255), nullable=False))
     phone: Optional[str] = Field(sa_column=Column(String(30), nullable=True))
     job_title: Optional[str] = Field(sa_column=Column(String(30), nullable=True))
     address: Optional[str] = Field(sa_column=Column(Text(), nullable=True))
 
     user: Optional["User"] = Relationship(back_populates="contacts")
+    lead: Optional["Lead"] = Relationship(back_populates="contact")
 
     tasks: List["ContactTask"] = Relationship(
         back_populates="contact",

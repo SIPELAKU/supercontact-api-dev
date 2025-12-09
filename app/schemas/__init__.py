@@ -19,7 +19,6 @@ from .error_schema import ErrorCode, ErrorResponse
 from .lead_schema import (
     LeadResponse,
     LeadListResponse,
-    LeadSortBy,
     SortOrder,
     LeadRequest,
     LeadGetQuery,

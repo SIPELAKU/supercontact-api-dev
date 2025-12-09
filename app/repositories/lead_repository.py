@@ -23,10 +23,12 @@ class LeadRepository:
         await self.db.refresh(lead)
         return lead
 
-    async def get_by_id(self, lead_id: UUID, load_user: bool = False):
+    async def get_by_id(self, lead_id: UUID, load_user: bool = False, load_contact: bool = False):
         query = select(Lead).where(Lead.id == lead_id)
         if load_user:
             query = query.options(selectinload(Lead.user))
+        if load_contact:
+            query = query.options(selectinload(Lead.))
         return await self.db.scalar(query)
 
     async def get_all(self, query_params: LeadGetQuery, load_user: bool = False):

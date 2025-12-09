@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.db.session import get_async_session
+from app.models import LeadIndustry, LeadCompanySize, LeadOfficeLocation, Contact
 from app.models.lead_model import LeadSource, LeadStatus, Lead
 from app.models.user_model import User
 
@@ -18,14 +19,18 @@ faker = Faker()
 async def seed_leads(total: int = 10, user_id: Optional[UUID] = None):
     db_gen = get_async_session()
     db = await anext(db_gen)
-    result = await db.scalars(select(User))
-    users = result.all()
+    query = await db.scalars(select(Contact))
+    contacts = query.all()
+    query = await db.scalars(select(User))
+    users = query.all()
     for i in range(total):
         lead = Lead(
-            lead_name=faker.name(),
-            source=LeadSource.WEB_FORM,
-            contact=faker.phone_number(),
-            status=LeadStatus.PROPOSAL,
+            lead_name=contacts[0].id,
+            industry=LeadIndustry.FINANCE,
+            company_size=LeadCompanySize.SMALL,
+            office_location=LeadOfficeLocation.JAKARTA,
+            lead_status=LeadStatus.PROPOSAL,
+            lead_source=LeadSource.WEB_FORM,
             assigned_to=users[1].id if not user_id else user_id,
             last_contacted=date(2025, 12, 12),
         )

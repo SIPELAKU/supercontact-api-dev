@@ -4,15 +4,42 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Enum, String, Index
+from sqlalchemy import Column, DateTime, Enum, Index, Text
 from sqlmodel import Relationship, SQLModel, Field
 
 
 # ENUM
+class LeadIndustry(StrEnum):
+    MANUFAKTUR = "Manufaktur"
+    TEKNOLOGI = "Teknologi"
+    RITEL = "Ritel"
+    FINANCE = "Finance"
+
+
+class LeadCompanySize(StrEnum):
+    SMALL = "1 - 50 Karyawan"
+    MEDIUM = "51 - 200 Karyawan"
+    LARGE = "201+ Karyawan"
+
+
+class LeadOfficeLocation(StrEnum):
+    JAKARTA = "DKI Jakarta"
+    BANDUNG = "Bandung"
+    YOGYAKARTA = "Yogyakarta"
+    MALANG = "Malang"
+
+
+class LeadTag(StrEnum):
+    RENEWAL = "Renewal"
+    URGENT = "Urgent"
+    HIGH_VALUE = "High Value"
+    TRIAL_USER = "Trial User"
+
+
 class LeadSource(StrEnum):
     WEB_FORM = "Web Form"
-    WHATSAPP = "Whatsapp"
-    MANUAL = "Manual"
+    WHATSAPP = "WhatsApp"
+    MANUAL = "Manual Entry"
 
 
 class LeadStatus(StrEnum):
@@ -29,20 +56,42 @@ class Lead(SQLModel, table=True):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    lead_name: str = Field(sa_column=Column(String(255), nullable=False))
-    source: LeadSource = Field(
+    lead_name: UUID = Field(foreign_key="contacts.id", nullable=False)
+
+    industry: LeadIndustry = Field(
         sa_column=Column(
             Enum(
-                LeadSource,
-                name="lead_source_enum",
+                LeadIndustry,
+                name="lead_industry_enum",
                 native_enum=False,
                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
             ),
             nullable=False
         )
     )
-    contact: str = Field(sa_column=Column(String(30), nullable=False))
-    status: LeadStatus = Field(
+    company_size: LeadCompanySize = Field(
+        sa_column=Column(
+            Enum(
+                LeadCompanySize,
+                name="lead_company_size_enum",
+                native_enum=False,
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+            ),
+            nullable=False
+        )
+    )
+    office_location: LeadOfficeLocation = Field(
+        sa_column=Column(
+            Enum(
+                LeadOfficeLocation,
+                name="lead_office_location_enum",
+                native_enum=False,
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+            ),
+            nullable=False
+        )
+    )
+    lead_status: LeadStatus = Field(
         sa_column=Column(
             Enum(
                 LeadStatus,
@@ -54,11 +103,31 @@ class Lead(SQLModel, table=True):
         ),
         default=LeadStatus.NEW,
     )
-    assigned_to: UUID = Field(foreign_key="users.id")
-    last_contacted: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+    lead_source: LeadSource = Field(
+        sa_column=Column(
+            Enum(
+                LeadSource,
+                name="lead_source_enum",
+                native_enum=False,
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+            ),
+            nullable=False
+        )
     )
+    assigned_to: UUID = Field(foreign_key="users.id")
+    tag: LeadTag = Field(
+        sa_column=Column(
+            Enum(
+                LeadTag,
+                name="lead_tag_enum",
+                native_enum=False,
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+            ),
+            nullable=False
+        )
+    )
+    notes: str = Field(sa_column=Column(Text, nullable=True))
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -72,10 +141,11 @@ class Lead(SQLModel, table=True):
         ),
     )
     user: Optional["User"] = Relationship(back_populates="leads")
+    contact: Optional["Contact"] = Relationship(back_populates="lead")
 
     __table_args__ = (
-        Index("idx_lead_status", "status"),
-        Index("idx_lead_source", "source"),
+        Index("idx_lead_status", "lead_status"),
+        Index("idx_lead_source", "lead_source"),
         Index("idx_lead_assigned_to", "assigned_to"),
         Index("idx_lead_created_at", "created_at"),
     )
