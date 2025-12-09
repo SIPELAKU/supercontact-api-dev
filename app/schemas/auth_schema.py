@@ -1,18 +1,17 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import SQLModel
-
-from app.models import UserRole, UserStatus
 
 
 class User(SQLModel):
     id: UUID
     fullname: str
     email: str
-    role: UserRole
-    status: UserStatus
+    role: Optional[UUID]
+    status: str
     avatar_initial: str
     created_at: datetime
     updated_at: datetime

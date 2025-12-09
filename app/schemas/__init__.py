@@ -13,7 +13,7 @@ from .contact_schema import (
     NoteResponse,
     TaskCreate,
     TaskResponse,
-    DeleteResponse
+    ContactDeleteResponse
 )
 from .error_schema import ErrorCode, ErrorResponse
 from .lead_schema import (

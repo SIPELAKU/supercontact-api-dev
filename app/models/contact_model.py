@@ -26,15 +26,17 @@ class Contact(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[ContactTask.contact_id]"}
     )
 
-    assigned_tasks: List["ContactTask"] = Relationship(
-        back_populates="assign_to",
-        sa_relationship_kwargs={"foreign_keys": "[ContactTask.assign_to_contact]"}
-    )
-
     notes: List["ContactNote"] = Relationship(
         back_populates="contact",
         sa_relationship_kwargs={"foreign_keys": "[ContactNote.contact_id]"}
     )
+
+
+class UserTaskLink(SQLModel, table=True):
+    __tablename__ = "user_tasks"
+
+    user_id: UUID = Field(foreign_key="users.id", primary_key=True)
+    task_id: UUID = Field(foreign_key="contact_tasks.id", primary_key=True)
 
 
 class ContactTask(SQLModel, table=True):
@@ -45,7 +47,7 @@ class ContactTask(SQLModel, table=True):
     task_name: str = Field(sa_column=Column(String(255), nullable=False))
     task_date: date = Field(sa_column=Column(Date, nullable=False))
     priority: str = Field(sa_column=Column(String(255), nullable=False))
-    assign_to_contact: UUID = Field(foreign_key="contacts.id")
+    assign_to: UUID = Field(foreign_key="users.id")
 
     # Relationships
     contact: Optional["Contact"] = Relationship(
@@ -53,9 +55,9 @@ class ContactTask(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[ContactTask.contact_id]"}
     )
 
-    assign_to: Optional["Contact"] = Relationship(
-        back_populates="assigned_tasks",
-        sa_relationship_kwargs={"foreign_keys": "[ContactTask.assign_to_contact]"}
+    users: List["User"] = Relationship(
+        back_populates="contact_tasks",
+        link_model=UserTaskLink
     )
 
 

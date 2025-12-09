@@ -7,6 +7,8 @@ from pydantic import ConfigDict
 from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func
 from sqlmodel import SQLModel, Field, Relationship
 
+from app.models.contact_model import UserTaskLink
+
 
 class UserStatus(StrEnum):
     ACTIVE = "Active"
@@ -121,6 +123,10 @@ class User(SQLModel, table=True):
     )
     leads: List["Lead"] = Relationship(back_populates="user")
     contacts: List["Contact"] = Relationship(back_populates="user")
+    contact_tasks: List["ContactTask"] = Relationship(
+        back_populates="users",
+        link_model=UserTaskLink
+    )
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),

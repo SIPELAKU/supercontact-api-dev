@@ -11,11 +11,15 @@ from app.schemas import (
     PaginatedContacts,
     NoteCreate, NoteResponse,
     TaskCreate, TaskResponse,
-    DeleteResponse, ResponseModel, ContactResponse
+    ResponseModel, ContactResponse, ContactDeleteResponse
 )
 from app.services.contact_service import ContactService
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
+
+
+async def get_contact_service(db: AsyncSession = Depends(get_async_session)):
+    return ContactService(db=db)
 
 
 @router.get("/", response_model=PaginatedContacts, dependencies=[Depends(auth_require)])
@@ -25,11 +29,9 @@ async def get_all_contacts(
         search: str = None,
         sort_by: str = "name",
         sort_order: str = "asc",
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user=Depends(auth_require)
 ):
-    service = ContactService(db)
-
     query = type("Query", (), {
         "page": page,
         "limit": limit,
@@ -55,76 +57,59 @@ async def get_all_contacts(
              dependencies=[Depends(auth_require)])
 async def create_contact(
         data: ContactCreate,
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user=Depends(auth_require)
 ):
-    service = ContactService(db)
     contact = await service.create_contact(user_id=current_user.id, data=data)
 
-    return ContactResponse(
-        status="success",
-        message="Contact created successfully.",
+    return ResponseModel(
         data=contact
     )
 
 
-@router.get("/{contact_id}", response_model=ContactResponse, dependencies=[Depends(auth_require)])
-async def get_contact_by_id(contact_id: UUID, db: AsyncSession = Depends(get_async_session),
+@router.get("/{contact_id}", response_model=ResponseModel[ContactResponse], dependencies=[Depends(auth_require)])
+async def get_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service),
                             current_user: User = Depends(auth_require)):
-    service = ContactService(db)
     contact = await service.find_one_contact(user_id=current_user.id, contact_id=contact_id)
 
-    return ContactResponse(
-        status="success",
-        message="Contact detail.",
-        data=contact
-    )
+    return ResponseModel(data=contact)
 
 
-@router.put("/{contact_id}", response_model=ContactResponse)
-async def update_contact_by_id(contact_id: UUID, data: ContactUpdate, db: AsyncSession = Depends(get_async_session),
+@router.put("/{contact_id}", response_model=ResponseModel[ContactResponse])
+async def update_contact_by_id(contact_id: UUID, data: ContactUpdate,
+                               service: ContactService = Depends(get_contact_service),
                                current_user: User = Depends(auth_require)):
-    service = ContactService(db)
     updated = await service.update_contact(user_id=current_user.id, contact_id=contact_id, data=data)
 
-    return ContactResponse(
-        status="success",
-        message="Contact updated successfully.",
-        data=updated
-    )
+    return ResponseModel(data=updated)
 
 
-@router.delete("/{contact_id}")
-async def delete_contact_by_id(contact_id: UUID, db: AsyncSession = Depends(get_async_session),
+@router.delete("/{contact_id}", response_model=ResponseModel[ContactDeleteResponse])
+async def delete_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service),
                                current_user: User = Depends(auth_require)):
-    service = ContactService(db)
-    await service.delete_contact(user_id=current_user.id, contact_id=contact_id)
+    contact = await service.delete_contact(user_id=current_user.id, contact_id=contact_id)
 
-    return DeleteResponse(
-        status="success",
-        message="Contact deleted successfully"
-    )
+    return ResponseModel(data={"id": contact_id, "deleted": contact})
 
 
-@router.post("/{contact_id}/notes", response_model=NoteResponse, dependencies=[Depends(auth_require)])
+@router.post("/{contact_id}/notes", response_model=ResponseModel[NoteResponse], dependencies=[Depends(auth_require)])
 async def create_note(
         contact_id: UUID,
         data: NoteCreate,
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    service = ContactService(db)
-    return await service.create_note(user_id=current_user.id, contact_id=contact_id, data=data)
+    note = await service.create_note(user_id=current_user.id, contact_id=contact_id, data=data)
+    return ResponseModel(data=note)
 
 
 # GET NOTES
 @router.get("/{contact_id}/notes", response_model=list[NoteResponse])
 async def get_all_notes(
         contact_id: UUID,
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    service = ContactService(db)
     return await service.get_notes(user_id=current_user.id, contact_id=contact_id)
 
 
@@ -133,10 +118,9 @@ async def get_all_notes(
 async def create_task(
         contact_id: UUID,
         data: TaskCreate,
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    service = ContactService(db)
     return await service.create_task(user_id=current_user.id, contact_id=contact_id, data=data)
 
 
@@ -144,8 +128,7 @@ async def create_task(
 @router.get("/{contact_id}/tasks", response_model=list[TaskResponse])
 async def get_all_tasks(
         contact_id: UUID,
-        db: AsyncSession = Depends(get_async_session),
+        service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    service = ContactService(db)
     return await service.get_tasks(user_id=current_user.id, contact_id=contact_id)

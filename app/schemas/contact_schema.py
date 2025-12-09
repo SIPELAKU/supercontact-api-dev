@@ -47,9 +47,9 @@ class ContactUpdate(SQLModel):
     address: Optional[str]
 
 
-class DeleteResponse(SQLModel):
-    status: str
-    message: str
+class ContactDeleteResponse(SQLModel):
+    id: UUID
+    deleted: bool
 
 
 class NoteCreate(SQLModel):
@@ -67,18 +67,18 @@ class NoteResponse(SQLModel):
 
 class TaskCreate(SQLModel):
     task_name: str
-    date: date
+    task_date: date
     priority: str
-    assign_to_contact: UUID
+    assign_to: UUID
 
 
 class TaskResponse(SQLModel):
     id: UUID
-    contact_id: int
+    contact_id: UUID
     task_name: str
-    date: date
+    task_date: date
     priority: str
-    assign_to_contact: UUID
+    assign_to: UUID
 
     class Config:
         from_attributes = True

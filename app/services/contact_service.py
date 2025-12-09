@@ -87,7 +87,7 @@ class ContactService:
         if not contact:
             raise AppException(
                 status_code=404,
-                code=ErrorCode.NOTFOUND,
+                code=ErrorCode.NOT_FOUND,
                 message="Contact not found"
             )
         return await self.repo.create_task(contact_id, data)

@@ -83,9 +83,9 @@ class ContactRepository:
         task = ContactTask(
             contact_id=contact_id,
             task_name=data.task_name,
-            date=data.date,
+            task_date=data.task_date,
             priority=data.priority,
-            assign_to_contact=data.assign_to_contact
+            assign_to=data.assign_to
         )
         self.db.add(task)
         await self.db.commit()
