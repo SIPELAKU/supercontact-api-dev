@@ -31,6 +31,12 @@ from .pipeline_schema import (
     PipelineUpdateStage,
     PipelineListResponse
 )
+from .product_schema import (
+    ProductGetQuery,
+    ProductResponse,
+    ProductRequest,
+    ProductListResponse
+)
 from .response_schema import ResponseModel
 from .user_schema import (
     UserCreateRequest,
