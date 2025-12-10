@@ -5,7 +5,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import Query
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 from app.models import DealStage
 
@@ -34,8 +34,8 @@ class PipelineRequest(SQLModel):
     client_account: UUID
     deal_stage: DealStage
     expected_close_date: datetime
-    amount: float
-    probability_of_close: int
+    amount: float = Field(ge=1)
+    probability_of_close: int = Field(ge=1, le=100)
     notes: Optional[str] = None
 
 
@@ -48,6 +48,7 @@ class PipelineResponse(SQLModel):
     amount: float
     probability_of_close: int
     notes: Optional[str]
+    is_closed: bool
     created_at: datetime
     updated_at: datetime
     contact: Contact

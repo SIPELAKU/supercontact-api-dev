@@ -27,7 +27,7 @@ class LeadService:
 
     # FIND ALL LEADS
     async def find_all_leads(self, query_params: LeadGetQuery):
-        leads, total = await self.repo.get_all(query_params=query_params, load_user=True)
+        leads, total = await self.repo.get_all(query_params=query_params, load_user=True, load_contact=True)
         total_pages = ceil(total / query_params.limit) if total else 1
 
         return {

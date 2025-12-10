@@ -40,8 +40,8 @@ class Pipeline(SQLModel, table=True):
     expected_close_date: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    amount: float = Field(sa_column=Column(Numeric(18, 2), nullable=False))
-    probability_of_close: int = Field(sa_column=Column(Integer, nullable=False))
+    amount: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
+    probability_of_close: int = Field(ge=1, le=100, sa_column=Column(Integer, nullable=False))
     notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
     is_closed: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
 

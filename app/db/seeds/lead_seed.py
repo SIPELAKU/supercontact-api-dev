@@ -1,6 +1,6 @@
 import argparse
 import asyncio
-from datetime import date
+import random
 from typing import Optional
 from uuid import UUID
 
@@ -9,14 +9,21 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.db.session import get_async_session
-from app.models import LeadIndustry, LeadCompanySize, LeadOfficeLocation, Contact
-from app.models.lead_model import LeadSource, LeadStatus, Lead
-from app.models.user_model import User
+from app.models import (
+    LeadIndustry,
+    LeadCompanySize,
+    LeadOfficeLocation,
+    LeadSource,
+    LeadStatus,
+    Lead,
+    User,
+    Contact, LeadTag,
+)
 
 faker = Faker()
 
 
-async def seed_leads(total: int = 10, user_id: Optional[UUID] = None):
+async def seed_leads(total: int = 10, user_id: Optional[UUID] = None, contact_id: Optional[UUID] = None):
     db_gen = get_async_session()
     db = await anext(db_gen)
     query = await db.scalars(select(Contact))
@@ -25,14 +32,15 @@ async def seed_leads(total: int = 10, user_id: Optional[UUID] = None):
     users = query.all()
     for i in range(total):
         lead = Lead(
-            lead_name=contacts[0].id,
-            industry=LeadIndustry.FINANCE,
-            company_size=LeadCompanySize.SMALL,
-            office_location=LeadOfficeLocation.JAKARTA,
-            lead_status=LeadStatus.PROPOSAL,
-            lead_source=LeadSource.WEB_FORM,
-            assigned_to=users[1].id if not user_id else user_id,
-            last_contacted=date(2025, 12, 12),
+            lead_name=contacts[i % len(contacts)].id if not contact_id else contact_id,
+            industry=random.choice(list(LeadIndustry)),
+            company_size=random.choice(list(LeadCompanySize)),
+            office_location=random.choice(list(LeadOfficeLocation)),
+            lead_status=random.choice(list(LeadStatus)),
+            lead_source=random.choice(list(LeadSource)),
+            assigned_to=users[i % len(users)].id if not user_id else user_id,
+            tag=random.choice(list(LeadTag)),
+            notes=faker.sentence(),
         )
         db.add(lead)
 
@@ -52,8 +60,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--user_id", type=UUID, help="Assign all leads to this user ID"
     )
+    parser.add_argument(
+        "--contact_id", type=UUID, help="Assign all leads to this contact ID"
+    )
     args = parser.parse_args()
 
     print(f"Running database seed for {args.total} leads...")
-    asyncio.run(seed_leads(args.total, args.user_id))
+    asyncio.run(seed_leads(total=args.total, user_id=args.user_id, contact_id=args.contact_id))
     print("Seed completed!")
