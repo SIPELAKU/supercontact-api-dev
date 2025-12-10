@@ -83,8 +83,8 @@ class ContactService:
         return await self.repo.get_notes(contact_id)
 
     async def create_task(self, user_id: UUID, contact_id: UUID, data: TaskCreate):
-        contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
-        if not contact:
+        task = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
+        if not task:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
@@ -93,8 +93,8 @@ class ContactService:
         return await self.repo.create_task(contact_id, data)
 
     async def get_tasks(self, user_id: UUID, contact_id: UUID):
-        contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
-        if not contact:
+        task = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
+        if not task:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,

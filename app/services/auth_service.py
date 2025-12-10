@@ -6,6 +6,7 @@ from app.models import User
 from app.repositories import UserRepository
 from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest
 from app.schemas.error_schema import ErrorCode
+from app.core.security import hash_password
 
 
 class AuthService:
@@ -32,14 +33,24 @@ class AuthService:
             )
 
         # CREATE NEW USER
-        new_user = await self.repo.create({
-            "fullname": payload.fullname,
-            "email": payload.email,
-            "password": hash_password(payload.password),
-            "company_name": payload.company_name
-        })
+        # new_user = await self.repo.create({
+        #     "fullname": payload.fullname,
+        #     "email": payload.email,
+        #     "password": hash_password(payload.password),
+        #     "company_name": payload.company_name
+        # })
 
-        return new_user
+        # return new_user
+        user = User(
+            fullname=payload.fullname,
+            email=payload.email,
+            password=hash_password(payload.password),
+            company_name=payload.company_name,
+            avatar_initial=payload.avatar_initial, #
+            role=payload.role,       #
+            status=payload.status,  #
+        )
+        return await self.repo.create(user)
 
     async def login(self, payload: UserLoginRequest):
         # VALIDATION IF USER EXISTING
