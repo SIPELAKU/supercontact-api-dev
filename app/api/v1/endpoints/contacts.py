@@ -104,24 +104,26 @@ async def create_note(
 
 
 # GET NOTES
-@router.get("/{contact_id}/notes", response_model=list[NoteResponse])
+@router.get("/{contact_id}/notes", response_model=ResponseModel[list[NoteResponse]])
 async def get_all_notes(
         contact_id: UUID,
         service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    return await service.get_notes(user_id=current_user.id, contact_id=contact_id)
+    note = await service.get_notes(user_id=current_user.id, contact_id=contact_id)
+    return ResponseModel(data=note)
 
 
 # CREATE TASK
-@router.post("/{contact_id}/tasks", response_model=TaskResponse, dependencies=[Depends(auth_require)])
+@router.post("/{contact_id}/tasks", response_model=ResponseModel[TaskResponse], dependencies=[Depends(auth_require)]) #
 async def create_task(
         contact_id: UUID,
         data: TaskCreate,
         service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
-    return await service.create_task(user_id=current_user.id, contact_id=contact_id, data=data)
+    task = await service.create_task(user_id=current_user.id, contact_id=contact_id, data=data)
+    return ResponseModel(data=task)
 
 
 # GET TASKS
