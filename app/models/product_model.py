@@ -3,7 +3,7 @@ from enum import StrEnum
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Enum, String, Numeric, Text
+from sqlalchemy import Column, DateTime, Enum, String, Numeric, Text, Index
 from sqlmodel import SQLModel, Field
 
 
@@ -47,4 +47,9 @@ class Product(SQLModel, table=True):
             nullable=False,
             onupdate=lambda: datetime.now(timezone.utc),
         ),
+    )
+
+    __table_args__ = (
+        Index("idx_product_product_name", "product_name"),
+        Index("idx_product_sku", "sku"),
     )

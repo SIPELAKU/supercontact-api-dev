@@ -16,7 +16,7 @@ class SortOrder(StrEnum):
 
 class ProductGetQuery(SQLModel):
     page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=1, le=100)
+    limit: int = Query(10, ge=0, le=100)
     search: Optional[str] = Query(None)
 
 
@@ -25,6 +25,7 @@ class ProductRequest(SQLModel):
     price: float
     sku: str
     tax_rate: ProductTaxRate
+    description: Optional[str]
 
 
 class ProductResponse(SQLModel):
@@ -41,4 +42,4 @@ class ProductListResponse(SQLModel):
     total: int
     page: int
     total_pages: int
-    leads: List[ProductResponse]
+    products: List[ProductResponse]
