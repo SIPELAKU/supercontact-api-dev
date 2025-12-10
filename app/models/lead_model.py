@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
@@ -47,8 +46,8 @@ class LeadStatus(StrEnum):
     CONTACTED = "Contacted"
     QUALIFIED = "Qualified"
     PROPOSAL = "Proposal"
-    CLOSED_WON = "Closed Won"
-    CLOSED_LOST = "Closed Lost"
+    CLOSED_WON = "Closed - Won"
+    CLOSED_LOST = "Closed - Lost"
 
 
 class Lead(SQLModel, table=True):
@@ -140,8 +139,8 @@ class Lead(SQLModel, table=True):
             onupdate=lambda: datetime.now(timezone.utc),
         ),
     )
-    user: Optional["User"] = Relationship(back_populates="leads")
-    contact: Optional["Contact"] = Relationship(back_populates="lead")
+    user: "User" = Relationship(back_populates="leads")
+    contact: "Contact" = Relationship(back_populates="lead")
 
     __table_args__ = (
         Index("idx_lead_status", "lead_status"),

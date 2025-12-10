@@ -13,7 +13,7 @@ from app.models import UserRole, UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
