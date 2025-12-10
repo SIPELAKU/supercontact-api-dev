@@ -30,6 +30,20 @@ async def get_all_pipelines(
     return ResponseModel(data=PipelineListResponse(**data))
 
 
+# GET ONE PIPELINE
+@router.get(
+    "/{pipeline_id}",
+    response_model=ResponseModel[PipelineResponse],
+    dependencies=[Depends(auth_require)],
+)
+async def get_pipeline_by_id(
+        pipeline_id: UUID,
+        service: PipelineService = Depends(get_pipeline_service)
+):
+    data = await service.find_one_pipeline(pipeline_id=pipeline_id)
+    return ResponseModel(data=data)
+
+
 # CREATE NEW PIPELINE
 @router.post(
     "",

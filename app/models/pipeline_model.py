@@ -43,7 +43,7 @@ class Pipeline(SQLModel, table=True):
     amount: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
     probability_of_close: int = Field(ge=1, le=100, sa_column=Column(Integer, nullable=False))
     notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
-    is_closed: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
+    is_deleted: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
