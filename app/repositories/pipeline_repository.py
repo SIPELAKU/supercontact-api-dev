@@ -49,6 +49,7 @@ class PipelineRepository:
             query = query.options(selectinload(Pipeline.contact))
 
         if query_params.limit == 0:
+            print(123)
             total_data = select(func.count()).select_from(query.subquery())
             total = await self.db.scalar(total_data)
             result = await self.db.scalars(query.where(
@@ -59,6 +60,7 @@ class PipelineRepository:
 
             return pipelines, total
 
+        print(222)
         # DATE RANGE OR DEFAULT DATETIME
         date_from = query_params.date_from or datetime(now.year, now.month, 1)
         date_to = query_params.date_to or datetime(now.year, now.month, 1).replace(
