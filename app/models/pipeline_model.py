@@ -4,8 +4,8 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Enum, String, Text, Numeric, Integer, CheckConstraint
-from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, DateTime, Enum, String, Text, Numeric, Integer, CheckConstraint, Boolean
+from sqlmodel import SQLModel, Field, Relationship
 
 
 # ENUM
@@ -14,6 +14,8 @@ class DealStage(StrEnum):
     QUALIFIED = "Qualified"
     NEGOTIATION = "Negotiation"
     PROPOSAL = "Proposal"
+    CLOSED_WON = "Closed - Won"
+    CLOSED_LOST = "Closed - Lost"
 
 
 class Pipeline(SQLModel, table=True):
@@ -23,7 +25,7 @@ class Pipeline(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     deal_name: str = Field(sa_column=Column(String(255), nullable=False))
-    client_account: str = Field(sa_column=Column(String(255), nullable=False))
+    client_account: UUID = Field(foreign_key="contacts.id", nullable=False)
     deal_stage: DealStage = Field(
         sa_column=Column(
             Enum(
@@ -41,6 +43,7 @@ class Pipeline(SQLModel, table=True):
     amount: float = Field(sa_column=Column(Numeric(18, 2), nullable=False))
     probability_of_close: int = Field(sa_column=Column(Integer, nullable=False))
     notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
+    is_closed: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -54,6 +57,7 @@ class Pipeline(SQLModel, table=True):
             onupdate=lambda: datetime.now(timezone.utc),
         ),
     )
+    contact: Optional["Contact"] = Relationship(back_populates="pipeline")
 
     __table_args__ = (
         CheckConstraint("probability_of_close >= 0 AND probability_of_close <= 100"),

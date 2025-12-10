@@ -14,9 +14,15 @@ class PipelineUpdateStage(SQLModel):
     deal_stage: DealStage
 
 
+class Contact(SQLModel):
+    id: UUID
+    name: str
+    company: str
+
+
 class PipelineGetQuery(SQLModel):
     page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=1, le=100)
+    limit: int = Query(10, ge=0, le=100)
     deal_stage: Optional[DealStage] = Query(None)
     date_from: Optional[date] = Query(None)
     date_to: Optional[date] = Query(None)
@@ -25,7 +31,7 @@ class PipelineGetQuery(SQLModel):
 
 class PipelineRequest(SQLModel):
     deal_name: str
-    client_account: str
+    client_account: UUID
     deal_stage: DealStage
     expected_close_date: datetime
     amount: float
@@ -36,7 +42,7 @@ class PipelineRequest(SQLModel):
 class PipelineResponse(SQLModel):
     id: UUID
     deal_name: str
-    client_account: str
+    client_account: UUID
     deal_stage: DealStage
     expected_close_date: datetime
     amount: float
@@ -44,6 +50,7 @@ class PipelineResponse(SQLModel):
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
+    contact: Contact
 
 
 class PipelineListResponse(SQLModel):

@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core import auth_require
 from app.db import get_async_session
 from app.schemas import PipelineGetQuery, ResponseModel, PipelineRequest, PipelineResponse, PipelineUpdateStage
 from app.schemas.pipeline_schema import PipelineListResponse
@@ -18,7 +19,8 @@ def get_pipeline_service(db: AsyncSession = Depends(get_async_session)):
 # GET ALL PIPELINES
 @router.get(
     "",
-    response_model=ResponseModel[PipelineListResponse]
+    response_model=ResponseModel[PipelineListResponse],
+    dependencies=[Depends(auth_require)],
 )
 async def get_all_pipelines(
         query_params: PipelineGetQuery = Depends(),
@@ -31,7 +33,8 @@ async def get_all_pipelines(
 # CREATE NEW PIPELINE
 @router.post(
     "",
-    response_model=ResponseModel[PipelineResponse]
+    response_model=ResponseModel[PipelineResponse],
+    dependencies=[Depends(auth_require)],
 )
 async def create_new_pipeline(
         payload: PipelineRequest,
@@ -44,7 +47,8 @@ async def create_new_pipeline(
 # UPDATE OLD PIPELINE
 @router.put(
     "/{pipeline_id}",
-    response_model=ResponseModel[PipelineResponse]
+    response_model=ResponseModel[PipelineResponse],
+    dependencies=[Depends(auth_require)],
 )
 async def update_pipeline_by_id(
         pipeline_id: UUID,
@@ -58,7 +62,8 @@ async def update_pipeline_by_id(
 # UPDATE OLD PIPELINE
 @router.patch(
     "/{pipeline_id}/stage",
-    response_model=ResponseModel[PipelineResponse]
+    response_model=ResponseModel[PipelineResponse],
+    dependencies=[Depends(auth_require)],
 )
 async def update_deal_stage_pipeline(
         pipeline_id: UUID,

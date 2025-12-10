@@ -12,12 +12,23 @@ class PipelineService:
 
     # CREATE NEW PIPELINE
     async def create_pipeline(self, payload: PipelineRequest):
-        return await self.repo.create(payload=payload)
+        client = await self.repo.get_client_by_id(client_id=payload.client_account)
+        if not client:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="Client account not found"
+            )
+        return await self.repo.create(payload=payload, load_contact=True)
 
     # GET ALL PIPELINES
     async def find_all_pipelines(self, query_params: PipelineGetQuery):
-        pipelines, total = await self.repo.get_all(query_params=query_params)
-        total_pages = ceil(total / query_params.limit) if total else 1
+        pipelines, total = await self.repo.get_all(query_params=query_params, load_contact=True)
+        if not total or not query_params.limit:
+            total_pages = 1
+            query_params.page = 1
+        else:
+            total_pages = ceil(total / query_params.limit)
 
         return {
             "total": total,
@@ -36,8 +47,15 @@ class PipelineService:
                 code=ErrorCode.NOT_FOUND,
                 message="Pipeline not found"
             )
+        client = await self.repo.get_client_by_id(client_id=payload.client_account)
+        if not client:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="Client account not found"
+            )
 
-        return await self.repo.update(pipeline=pipeline, payload=payload)
+        return await self.repo.update(pipeline=pipeline, payload=payload, load_contact=True)
 
     # UPDATE DEAL STAGE
     async def update_deal_stage(self, pipeline_id: UUID, payload: PipelineUpdateStage):
@@ -49,4 +67,4 @@ class PipelineService:
                 message="Pipeline not found"
             )
 
-        return await self.repo.update_stage(pipeline=pipeline, payload=payload)
+        return await self.repo.update_stage(pipeline=pipeline, payload=payload, load_contact=True)
