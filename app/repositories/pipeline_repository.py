@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, update
+from sqlmodel import select, func, update, extract, case, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Pipeline, Contact
+from app.models import Pipeline, Contact, DealStage
 from app.schemas import PipelineRequest, PipelineGetQuery, PipelineUpdateStage
 
 
@@ -38,8 +38,9 @@ class PipelineRepository:
         # UPDATE IS CLOSED IF EXPECTED CLOSED LESS THAN NOW
         query = update(Pipeline).where(
             Pipeline.expected_close_date < now,
-            Pipeline.is_closed == False
-        ).values(is_closed=True)
+            Pipeline.deal_stage.notin_([DealStage.CLOSED_WON, DealStage.CLOSED_LOST]),
+            Pipeline.is_deleted == False
+        ).values(is_deleted=True)
         await self.db.execute(query)
         await self.db.commit()
 
@@ -53,7 +54,7 @@ class PipelineRepository:
             total = await self.db.scalar(total_data)
             result = await self.db.scalars(query.where(
                 Pipeline.expected_close_date >= now,
-                Pipeline.is_closed == False
+                Pipeline.is_deleted == False
             ))
             pipelines = result.all()
 
@@ -107,7 +108,34 @@ class PipelineRepository:
         return await self.get_by_id(pipeline_id=pipeline.id, load_contact=load_contact)
 
     async def get_pipeline_stats(self):
-        query = select(
-            func.coalesce(func.sum(Pipeline.amount), 0).label("total_amount"),
-            func.coalesce(func.avg(Pipeline.amount), 0).label("avg_amount"),
+        now = datetime.now(timezone.utc)
+        month = now.month
+        year = now.year
+
+        # Kondisi untuk total/avg: bulan ini & belum closed OR closed won/lost kapanpun
+        total_condition = or_(
+            ((Pipeline.deal_stage.notin_(["Closed - Won", "Closed - Lost"])) &
+             (extract("month", Pipeline.expected_close_date) == month) &
+             (extract("year", Pipeline.expected_close_date) == year) &
+             (Pipeline.is_deleted == False)),
+            ((Pipeline.deal_stage.in_(["Closed - Won", "Closed - Lost"])) &
+             (Pipeline.is_deleted == False))
         )
+
+        query = select(
+            func.coalesce(func.sum(case((total_condition, Pipeline.amount))), 0).label("total_pipeline"),
+            func.coalesce(func.avg(case((total_condition, Pipeline.amount))), 0).label("avg_pipeline"),
+            # Winrate: closed won / total pipeline
+            (func.coalesce(func.sum(case(((Pipeline.deal_stage == "Closed - Won") &
+                                          (Pipeline.is_deleted == False), Pipeline.amount))), 0) /
+             func.nullif(func.coalesce(func.sum(case((total_condition, Pipeline.amount))), 0), 0) * 100
+             ).label("winrate_pipeline")
+        )
+
+        result = await self.db.execute(query)
+        stats = result.one()
+        return {
+            "total_pipeline": round(float(stats.total_pipeline), 1),
+            "avg_pipeline": round(float(stats.avg_pipeline), 1),
+            "winrate_pipeline": round(float(stats.winrate_pipeline), 1),
+        }

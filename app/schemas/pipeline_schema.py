@@ -14,6 +14,12 @@ class PipelineUpdateStage(SQLModel):
     deal_stage: DealStage
 
 
+class PipelineStatistic(SQLModel):
+    total_pipeline: float
+    avg_pipeline: float
+    winrate_pipeline: float
+
+
 class Contact(SQLModel):
     id: UUID
     name: str
@@ -48,7 +54,7 @@ class PipelineResponse(SQLModel):
     amount: float
     probability_of_close: int
     notes: Optional[str]
-    is_closed: bool
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
     contact: Contact
@@ -58,4 +64,5 @@ class PipelineListResponse(SQLModel):
     total: int
     page: int
     total_pages: int
+    stats: PipelineStatistic
     pipelines: List[PipelineResponse]

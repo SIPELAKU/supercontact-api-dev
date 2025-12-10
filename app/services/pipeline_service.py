@@ -29,14 +29,26 @@ class PipelineService:
             query_params.page = 1
         else:
             total_pages = ceil(total / query_params.limit)
-
+        stats = await self.repo.get_pipeline_stats()
         return {
             "total": total,
             "page": query_params.page,
             "limit": query_params.limit,
             "total_pages": total_pages,
+            "stats": stats,
             "pipelines": pipelines,
         }
+
+    # GET ONE PIPELINE
+    async def find_one_pipeline(self, pipeline_id: UUID):
+        pipeline = await  self.repo.get_by_id(pipeline_id=pipeline_id, load_contact=True)
+        if not pipeline:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="Pipeline not found"
+            )
+        return pipeline
 
     # UPDATE PIPELINE
     async def update_pipeline(self, pipeline_id: UUID, payload: PipelineRequest):
