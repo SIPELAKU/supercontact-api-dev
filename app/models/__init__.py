@@ -9,4 +9,5 @@ from .lead_model import (
     LeadCompanySize
 )
 from .pipeline_model import Pipeline, DealStage
+from .product_model import Product, ProductTaxRate
 from .user_model import User, UserRole, UserStatus, RolePermission
