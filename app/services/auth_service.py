@@ -28,16 +28,18 @@ class AuthService:
             raise AppException(
                 status_code=400,
                 code=ErrorCode.BAD_REQUEST,
-                message="Email already registered"
+                message="Email already registered",
             )
 
         # CREATE NEW USER
-        new_user = await self.repo.create({
-            "fullname": payload.fullname,
-            "email": payload.email,
-            "password": hash_password(payload.password),
-            "company_name": payload.company_name
-        })
+        new_user = await self.repo.create(
+            {
+                "fullname": payload.fullname,
+                "email": payload.email,
+                "password": hash_password(payload.password),
+                "company_name": payload.company_name,
+            }
+        )
 
         return new_user
 
