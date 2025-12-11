@@ -3,7 +3,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core import auth_require
 from app.db import get_async_session
 from app.schemas import (
     ResponseModel,
@@ -24,7 +23,7 @@ def get_product_service(db: AsyncSession = Depends(get_async_session)):
 @router.get(
     "",
     response_model=ResponseModel[ProductListResponse],
-    dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(auth_require)],
 )
 async def get_all_products(
         query_params: ProductGetQuery = Depends(),
@@ -38,7 +37,7 @@ async def get_all_products(
 @router.post(
     "",
     response_model=ResponseModel[ProductResponse],
-    dependencies=[Depends(auth_require)],
+    #     dependencies=[Depends(auth_require)],
 )
 async def create_new_product(
         payload: ProductRequest,
@@ -52,7 +51,7 @@ async def create_new_product(
 @router.get(
     "/{product_id}",
     response_model=ResponseModel[ProductResponse],
-    dependencies=[Depends(auth_require)],
+    #     dependencies=[Depends(auth_require)],
 )
 async def get_product_by_id(
         product_id: UUID,
@@ -66,7 +65,7 @@ async def get_product_by_id(
 @router.put(
     "/{product_id}",
     response_model=ResponseModel[ProductResponse],
-    dependencies=[Depends(auth_require)],
+    #     dependencies=[Depends(auth_require)],
 )
 async def update_product_by_id(
         product_id: UUID,
@@ -81,7 +80,7 @@ async def update_product_by_id(
 @router.delete(
     "/{product_id}",
     response_model=ResponseModel[ProductResponse],
-    dependencies=[Depends(auth_require)],
+    #     dependencies=[Depends(auth_require)],
 )
 async def delete_product_by_id(
         product_id: UUID,
