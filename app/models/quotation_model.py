@@ -1,14 +1,10 @@
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, String, Integer
+from sqlalchemy import Column, DateTime, String, Integer, Numeric, Text
 from sqlmodel import SQLModel, Field, Relationship
-
-
-class Lead(SQLModel):
-    id: UUID
-    company_name: str
 
 
 class Quotation(SQLModel, table=True):
@@ -20,7 +16,7 @@ class Quotation(SQLModel, table=True):
     lead_id: UUID = Field(foreign_key="leads.id", nullable=False)
     quotation_title: str = Field(sa_column=Column(String(255), nullable=False))
     expire_date: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
-    grand_total: int = Field(sa_column=Column(Integer, nullable=False))
+    grand_total: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -36,6 +32,7 @@ class Quotation(SQLModel, table=True):
     )
 
     lead: "Lead" = Relationship(back_populates="quotations")
+    items: List["QuotationItem"] = Relationship(back_populates="quotation")
 
 
 class QuotationItem(SQLModel, table=True):
@@ -47,9 +44,9 @@ class QuotationItem(SQLModel, table=True):
     product_id: UUID = Field(foreign_key="products.id", nullable=False)
 
     quantity: int = Field(sa_column=Column(Integer, nullable=False))
-    unit_price: int = Field(sa_column=Column(Integer, nullable=False))
+    unit_price: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
+    subtotal: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
+    notes: str = Field(sa_column=Column(Text, nullable=False))
 
-    subtotal: int = Field(sa_column=Column(Integer, nullable=False))
-
-    order: "Order" = Relationship(back_populates="items")
+    quotation: "Quotation" = Relationship(back_populates="items")
     product: "Product" = Relationship()
