@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, date
 from enum import StrEnum
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
+from fastapi import Query
 from sqlmodel import SQLModel
 
 
@@ -13,7 +14,7 @@ class Product(SQLModel):
 
 
 class Contact(SQLModel):
-    id: int
+    id: UUID
     name: str
     email: str
     phone: str
@@ -33,20 +34,24 @@ class Lead(SQLModel):
     contact: Contact
 
 
+class QuotationGetQuery(SQLModel):
+    page: int = Query(1, ge=1)
+    limit: int = Query(10, ge=0, le=100)
+    date_from: Optional[date] = Query(None)
+    date_to: Optional[date] = Query(None)
+    search: Optional[str] = Query(None)
+
+
 class QuotationItemRequest(SQLModel):
-    quotation_id: UUID
     product_id: UUID
     quantity: int
-    unit_price: float
-    subtotal: float
-    notes: str
+    notes: Optional[str]
 
 
 class QuotationRequest(SQLModel):
     lead_id: UUID
     quotation_title: str
     expire_date: datetime
-    grand_total: float
     items: List[QuotationItemRequest]
 
 
@@ -57,7 +62,7 @@ class QuotationItemResponse(SQLModel):
     quantity: int
     unit_price: float
     subtotal: float
-    notes: str
+    notes: Optional[str]
     product: Product
 
 
@@ -71,3 +76,15 @@ class QuotationResponse(SQLModel):
     items: List[QuotationItemResponse]
     created_at: datetime
     updated_at: datetime
+
+
+class QuotationListResponse(SQLModel):
+    total: int
+    page: int
+    total_pages: int
+    quotations: List[QuotationResponse]
+
+
+class QuotationDeleteResponse(SQLModel):
+    id: UUID
+    deleted: bool

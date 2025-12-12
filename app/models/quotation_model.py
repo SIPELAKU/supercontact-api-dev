@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
 from sqlalchemy import Column, DateTime, String, Integer, Numeric, Text
+from sqlalchemy.orm import relationship
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -32,7 +33,15 @@ class Quotation(SQLModel, table=True):
     )
 
     lead: "Lead" = Relationship(back_populates="quotations")
-    items: List["QuotationItem"] = Relationship(back_populates="quotation")
+    items: List["QuotationItem"] = Relationship(
+        back_populates="quotation",
+        sa_relationship=relationship(
+            "QuotationItem",
+            back_populates="quotation",
+            cascade="all, delete-orphan",
+            passive_deletes=True
+        )
+    )
 
 
 class QuotationItem(SQLModel, table=True):
@@ -46,7 +55,7 @@ class QuotationItem(SQLModel, table=True):
     quantity: int = Field(sa_column=Column(Integer, nullable=False))
     unit_price: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
     subtotal: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
-    notes: str = Field(sa_column=Column(Text, nullable=False))
+    notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
 
     quotation: "Quotation" = Relationship(back_populates="items")
     product: "Product" = Relationship()

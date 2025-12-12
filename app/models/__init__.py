@@ -10,5 +10,5 @@ from .lead_model import (
 )
 from .pipeline_model import Pipeline, DealStage
 from .product_model import Product, ProductTaxRate
-from .quotation_model import Quotation
+from .quotation_model import Quotation, QuotationItem
 from .user_model import User, UserRole, UserStatus, RolePermission
