@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import StrEnum
+from typing import List
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
@@ -141,6 +142,7 @@ class Lead(SQLModel, table=True):
     )
     user: "User" = Relationship(back_populates="leads")
     contact: "Contact" = Relationship(back_populates="lead")
+    quotations: List["Quotation"] = Relationship(back_populates="lead")
 
     __table_args__ = (
         Index("idx_lead_status", "lead_status"),

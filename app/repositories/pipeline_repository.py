@@ -134,8 +134,9 @@ class PipelineRepository:
 
         result = await self.db.execute(query)
         stats = result.one()
+        print(stats)
         return {
-            "total_pipeline": round(float(stats.total_pipeline), 1),
-            "avg_pipeline": round(float(stats.avg_pipeline), 1),
-            "winrate_pipeline": round(float(stats.winrate_pipeline), 1),
+            "total_pipeline": round(float(stats.total_pipeline or 0), 1),
+            "avg_pipeline": round(float(stats.avg_pipeline or 0), 1),
+            "winrate_pipeline": round(float(stats.winrate_pipeline or 0), 1),
         }
