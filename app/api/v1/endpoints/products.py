@@ -8,7 +8,7 @@ from app.schemas import (
     ResponseModel,
     ProductGetQuery,
     ProductListResponse,
-    ProductResponse, ProductRequest,
+    ProductResponse, ProductRequest, ProductDeleteResponse,
 )
 from app.services import ProductService
 
@@ -79,7 +79,7 @@ async def update_product_by_id(
 # DELETE PRODUCT BY ID
 @router.delete(
     "/{product_id}",
-    response_model=ResponseModel[ProductResponse],
+    response_model=ResponseModel[ProductDeleteResponse],
     #     dependencies=[Depends(auth_require)],
 )
 async def delete_product_by_id(
@@ -87,4 +87,4 @@ async def delete_product_by_id(
         service: ProductService = Depends(get_product_service)
 ):
     data = await service.delete_product(product_id=product_id)
-    return ResponseModel(data=data)
+    return ResponseModel(data=ProductDeleteResponse(id=product_id, deleted=data))

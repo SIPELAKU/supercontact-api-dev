@@ -65,6 +65,5 @@ class ProductRepository:
     async def delete(self, product: Product):
         await self.db.delete(product)
         await self.db.commit()
-        await self.db.refresh(product)
 
-        return await self.get_by_id(product_id=product.id)
+        return True

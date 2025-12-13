@@ -18,7 +18,14 @@ class ProductService:
 
     # GET PRODUCT BY ID
     async def find_one_product(self, product_id: UUID):
-        return await self.repo.get_by_id(product_id=product_id)
+        product = await self.repo.get_by_id(product_id=product_id)
+        if not product:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="Product not found"
+            )
+        return product
 
     # GET ALL PRODUCTS
     async def find_all_products(self, query_params: ProductGetQuery):

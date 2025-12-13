@@ -43,3 +43,8 @@ class ProductListResponse(SQLModel):
     page: int
     total_pages: int
     products: List[ProductResponse]
+
+
+class ProductDeleteResponse(SQLModel):
+    id: UUID
+    deleted: bool

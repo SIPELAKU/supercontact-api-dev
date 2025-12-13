@@ -35,7 +35,8 @@ from .product_schema import (
     ProductGetQuery,
     ProductResponse,
     ProductRequest,
-    ProductListResponse
+    ProductListResponse,
+    ProductDeleteResponse,
 )
 from .quotation_schema import (
     QuotationItemRequest,
