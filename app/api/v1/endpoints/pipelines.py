@@ -1,10 +1,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_async_session
-from app.schemas import PipelineGetQuery, ResponseModel, PipelineRequest, PipelineResponse, PipelineUpdateStage
+from app.models import User
+from app.schemas import PipelineGetQuery, ResponseModel, PipelineRequest, PipelineResponse, PipelineUpdateStage, \
+    PipelineAssignedUsers
 from app.schemas.pipeline_schema import PipelineListResponse
 from app.services import PipelineService
 
@@ -29,6 +32,19 @@ async def get_all_pipelines(
     return ResponseModel(data=PipelineListResponse(**data))
 
 
+# FIND ACTIVE ASSIGNED USERS
+@router.get(
+    "/active-users",
+    response_model=ResponseModel[PipelineAssignedUsers],
+    #     dependencies=[Depends(auth_require)],
+)
+async def get_active_assigned_users(
+        service: PipelineService = Depends(get_pipeline_service)
+):
+    data = await service.find_active_assigned_users()
+    return ResponseModel(data=PipelineAssignedUsers(**data))
+
+
 # GET ONE PIPELINE
 @router.get(
     "/{pipeline_id}",
@@ -47,13 +63,16 @@ async def get_pipeline_by_id(
 @router.post(
     "",
     response_model=ResponseModel[PipelineResponse],
-    #     dependencies=[Depends(auth_require)],
 )
 async def create_new_pipeline(
         payload: PipelineRequest,
-        service: PipelineService = Depends(get_pipeline_service)
+        # current_user=Depends(auth_require),
+        db: AsyncSession = Depends(get_async_session),
+        service: PipelineService = Depends(get_pipeline_service),
 ):
-    data = await service.create_pipeline(payload=payload)
+    query = await db.scalars(select(User))
+    users = query.all()
+    data = await service.create_pipeline(user_id=users[0].id, payload=payload)
     return ResponseModel(data=data)
 
 

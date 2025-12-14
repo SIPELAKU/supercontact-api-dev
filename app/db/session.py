@@ -9,7 +9,7 @@ from app.core.config import settings
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
 # SESSION MAKER
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # FOR SESSION
