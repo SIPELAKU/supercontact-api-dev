@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
 from app.api import api_v1_router
 from app.core import settings
+from app.db import get_async_session
 from app.exceptions import AppException, app_exception_handler
 from app.schemas import ErrorCode, ResponseModel, ErrorResponse
 
@@ -24,6 +26,21 @@ app.add_middleware(
 @app.get("/", tags=["Root"])
 def root():
     return {"success": True, "data": {"message": "Server is running!"}, "errors": None}
+
+
+@app.get("/health", tags=["Health"])
+async def health(db=Depends(get_async_session)):
+    try:
+        await db.exec(text("SELECT 1"))
+        return {
+            "status": "ok",
+            "database": "connected"
+        }
+    except Exception:
+        return {
+            "status": "error",
+            "database": "disconnected"
+        }
 
 
 # ERROR HANDLER FOR AppException (404, 403, dll)

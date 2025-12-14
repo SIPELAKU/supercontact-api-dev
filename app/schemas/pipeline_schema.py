@@ -39,8 +39,6 @@ class Contact(SQLModel):
 
 
 class PipelineGetQuery(SQLModel):
-    page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=0, le=100)
     deal_stage: Optional[DealStage] = Query(None)
     date_from: Optional[datetime] = Query(None)
     date_to: Optional[datetime] = Query(None)
@@ -76,8 +74,6 @@ class PipelineResponse(SQLModel):
 
 class PipelineListResponse(SQLModel):
     total: int
-    page: int
-    total_pages: int
     stats: PipelineStats
     pipelines: List[PipelineResponse]
 

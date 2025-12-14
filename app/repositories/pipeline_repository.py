@@ -109,17 +109,6 @@ class PipelineRepository:
         if load_contact:
             query = query.options(selectinload(Pipeline.contact))
 
-        if query_params.limit == 0:
-            total_data = select(func.count()).select_from(query.subquery())
-            total = await self.db.scalar(total_data)
-            result = await self.db.scalars(query.where(
-                Pipeline.expected_close_date >= now,
-                Pipeline.is_deleted == False
-            ))
-            pipelines = result.all()
-
-            return pipelines, total
-
         # DATE RANGE OR DEFAULT DATETIME
         date_from = query_params.date_from or datetime(now.year, now.month, 1)
         date_to = query_params.date_to or datetime(now.year, now.month, 1).replace(
@@ -146,12 +135,11 @@ class PipelineRepository:
                 )
             )
 
-        total_data = select(func.count()).select_from(query.subquery())
-        total = await self.db.scalar(total_data)
+        result = select(func.count()).select_from(Pipeline)
+        total = await self.db.scalar(result)
 
         # PAGINATION
-        offset = (query_params.page - 1) * query_params.limit
-        result = await self.db.scalars(query.offset(offset).limit(query_params.limit))
+        result = await self.db.scalars(query)
         pipelines = result.all()
 
         return pipelines, total
