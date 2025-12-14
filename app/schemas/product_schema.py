@@ -6,8 +6,6 @@ from uuid import UUID
 from fastapi import Query
 from sqlmodel import SQLModel
 
-from app.models import ProductTaxRate
-
 
 class SortOrder(StrEnum):
     ASC = "asc"
@@ -24,7 +22,6 @@ class ProductRequest(SQLModel):
     product_name: str
     price: float
     sku: str
-    tax_rate: ProductTaxRate
     description: Optional[str]
 
 
@@ -33,7 +30,7 @@ class ProductResponse(SQLModel):
     product_name: str
     price: float
     sku: str
-    tax_rate: ProductTaxRate
+    description: Optional[str]
     created_at: datetime
     updated_at: datetime
 

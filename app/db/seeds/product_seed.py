@@ -6,10 +6,7 @@ from faker import Faker
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_async_session
-from app.models import (
-    Product,
-    ProductTaxRate,
-)
+from app.models import Product
 
 faker = Faker()
 
@@ -27,7 +24,6 @@ async def seed_products(total: int = 10):
             product_name=faker.sentence(nb_words=3),
             price=faker.pyint(min_value=1),
             sku=generate_sku(),
-            tax_rate=random.choice(list(ProductTaxRate)),
             description=faker.sentence(),
         )
         db.add(product)
@@ -35,6 +31,7 @@ async def seed_products(total: int = 10):
     try:
         await db.commit()
     except IntegrityError:
+        print("IntegrityError: Failed to create product record")
         await db.rollback()
     finally:
         await db.close()

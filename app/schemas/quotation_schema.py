@@ -1,9 +1,9 @@
 from datetime import datetime, date
-from enum import StrEnum
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import Query
+from pydantic import EmailStr
 from sqlmodel import SQLModel
 
 
@@ -16,21 +16,14 @@ class Product(SQLModel):
 class Contact(SQLModel):
     id: UUID
     name: str
-    email: str
+    email: EmailStr
     phone: str
     company: str
 
 
-class LeadOfficeLocation(StrEnum):
-    JAKARTA = "DKI Jakarta"
-    BANDUNG = "Bandung"
-    YOGYAKARTA = "Yogyakarta"
-    MALANG = "Malang"
-
-
 class Lead(SQLModel):
     id: UUID
-    office_location: LeadOfficeLocation
+    office_location: str
     contact: Contact
 
 
