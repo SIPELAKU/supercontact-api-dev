@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import random
+from enum import StrEnum
 from typing import Optional
 from uuid import UUID
 
@@ -12,7 +13,6 @@ from app.db.session import get_async_session
 from app.models import (
     LeadIndustry,
     LeadCompanySize,
-    LeadOfficeLocation,
     LeadSource,
     LeadStatus,
     Lead,
@@ -21,6 +21,15 @@ from app.models import (
 )
 
 faker = Faker()
+
+
+class LeadOfficeLocation(StrEnum):
+    JAKARTA = "DKI Jakarta"
+    BANDUNG = "Bandung"
+    YOGYAKARTA = "Yogyakarta"
+    MALANG = "Malang"
+    SURABAYA = "Surabaya"
+    TEGAL = "Tegal"
 
 
 async def seed_leads(total: int = 10, user_id: Optional[UUID] = None, contact_id: Optional[UUID] = None):
@@ -32,7 +41,7 @@ async def seed_leads(total: int = 10, user_id: Optional[UUID] = None, contact_id
     users = query.all()
     for i in range(total):
         lead = Lead(
-            lead_name=contacts[i % len(contacts)].id if not contact_id else contact_id,
+            contact_id=contacts[i % len(contacts)].id if not contact_id else contact_id,
             industry=random.choice(list(LeadIndustry)),
             company_size=random.choice(list(LeadCompanySize)),
             office_location=random.choice(list(LeadOfficeLocation)),

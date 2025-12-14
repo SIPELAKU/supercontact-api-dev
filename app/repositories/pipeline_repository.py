@@ -119,7 +119,9 @@ class PipelineRepository:
 
         # FILTERING
         if query_params.deal_stage:
-            query = query.where(Pipeline.deal_stage == query_params.deal_stage)
+            query = query.where(Pipeline.deal_stage.in_(query_params.deal_stage))
+        if query_params.assigned_to:
+            query = query.where(Pipeline.assigned_to.in_(query_params.assigned_to))
 
         # SEARCH NAME
         if query_params.search:
@@ -135,7 +137,7 @@ class PipelineRepository:
                 )
             )
 
-        result = select(func.count()).select_from(Pipeline)
+        result = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(result)
 
         # PAGINATION

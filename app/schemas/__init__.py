@@ -22,7 +22,8 @@ from .lead_schema import (
     SortOrder,
     LeadRequest,
     LeadGetQuery,
-    LeadUpdateStatus
+    LeadUpdateStatus,
+    LeadDeleteResponse,
 )
 from .pipeline_schema import (
     PipelineRequest,
