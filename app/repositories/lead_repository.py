@@ -5,9 +5,8 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import User, Lead
-from app.schemas import LeadRequest, LeadUpdateStatus
-from app.schemas.lead_schema import LeadGetQuery
+from app.models import User, Lead, Contact
+from app.schemas import LeadRequest, LeadUpdateStatus, LeadGetQuery, SortOrder
 
 
 class LeadRepository:
@@ -35,7 +34,7 @@ class LeadRepository:
     async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
         query = select(Lead)
 
-        # Load User Relationship
+        # Load Relationship
         if load_user:
             query = query.options(selectinload(Lead.user))
         if load_contact:
@@ -43,11 +42,11 @@ class LeadRepository:
 
         # FILTERING
         if query_params.lead_status:
-            query = query.where(Lead.lead_status == query_params.lead_status)
+            query = query.where(Lead.lead_status.in_(query_params.lead_status))
         if query_params.lead_source:
-            query = query.where(Lead.lead_source == query_params.lead_source)
+            query = query.where(Lead.lead_source.in_(query_params.lead_source))
         if query_params.assigned_to:
-            query = query.where(Lead.assigned_to == query_params.assigned_to)
+            query = query.where(Lead.assigned_to.in_(query_params.assigned_to))
 
         # DATE RANGE
         if query_params.date_from:
@@ -57,10 +56,14 @@ class LeadRepository:
 
         # SEARCH BY LEAD NAME
         if query_params.search:
-            query = query.where(Lead.lead_name.ilike(f"%{query_params.search}%"))
+            query = (
+                query
+                .join(Lead.contact)
+                .where(Contact.name.ilike(f"%{query_params.search}%"))
+            )
 
         # SORTING BY CREATED_AT
-        if query_params.sort_order == "desc":
+        if query_params.sort_order == SortOrder.DESC:
             query = query.order_by(Lead.created_at.desc())
         else:
             query = query.order_by(Lead.created_at.asc())
@@ -101,3 +104,9 @@ class LeadRepository:
         await self.db.refresh(lead)
 
         return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
+
+    async def delete(self, lead: Lead):
+        await self.db.delete(lead)
+        await self.db.commit()
+
+        return True

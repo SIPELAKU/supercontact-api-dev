@@ -39,10 +39,11 @@ class Contact(SQLModel):
 
 
 class PipelineGetQuery(SQLModel):
-    deal_stage: Optional[DealStage] = Query(None)
+    deal_stage: Optional[List[DealStage]] = Query(None)
     date_from: Optional[datetime] = Query(None)
     date_to: Optional[datetime] = Query(None)
     search: Optional[str] = Query(None)
+    assigned_to: Optional[List[UUID]] = Query(None)
 
 
 class PipelineRequest(SQLModel):
