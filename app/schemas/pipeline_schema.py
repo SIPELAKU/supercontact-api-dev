@@ -1,10 +1,10 @@
-from datetime import date
 from datetime import datetime
 from typing import List
 from typing import Optional
 from uuid import UUID
 
 from fastapi import Query
+from pydantic import EmailStr
 from sqlmodel import SQLModel, Field
 
 from app.models import DealStage
@@ -14,10 +14,22 @@ class PipelineUpdateStage(SQLModel):
     deal_stage: DealStage
 
 
-class PipelineStatistic(SQLModel):
-    total_pipeline: float
-    avg_pipeline: float
-    winrate_pipeline: float
+class Metric(SQLModel):
+    value: int
+    percent: int
+    trend: str
+
+
+class PipelineStats(SQLModel):
+    total_pipeline: Metric
+    avg_pipeline: Metric
+    winrate_pipeline: Metric
+
+
+class User(SQLModel):
+    id: UUID
+    fullname: str
+    email: EmailStr
 
 
 class Contact(SQLModel):
@@ -30,8 +42,8 @@ class PipelineGetQuery(SQLModel):
     page: int = Query(1, ge=1)
     limit: int = Query(10, ge=0, le=100)
     deal_stage: Optional[DealStage] = Query(None)
-    date_from: Optional[date] = Query(None)
-    date_to: Optional[date] = Query(None)
+    date_from: Optional[datetime] = Query(None)
+    date_to: Optional[datetime] = Query(None)
     search: Optional[str] = Query(None)
 
 
@@ -54,9 +66,11 @@ class PipelineResponse(SQLModel):
     amount: float
     probability_of_close: int
     notes: Optional[str]
+    assigned_to: UUID
     is_deleted: bool
     created_at: datetime
     updated_at: datetime
+    user: User
     contact: Contact
 
 
@@ -64,5 +78,16 @@ class PipelineListResponse(SQLModel):
     total: int
     page: int
     total_pages: int
-    stats: PipelineStatistic
+    stats: PipelineStats
     pipelines: List[PipelineResponse]
+
+
+class PipelineActiveUser(SQLModel):
+    id: UUID
+    fullname: str
+    active_pipeline_count: int
+
+
+class PipelineAssignedUsers(SQLModel):
+    total: int
+    users: List[PipelineActiveUser]

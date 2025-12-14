@@ -29,7 +29,8 @@ from .pipeline_schema import (
     PipelineGetQuery,
     PipelineResponse,
     PipelineUpdateStage,
-    PipelineListResponse
+    PipelineListResponse,
+    PipelineAssignedUsers,
 )
 from .product_schema import (
     ProductGetQuery,
