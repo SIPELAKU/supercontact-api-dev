@@ -10,16 +10,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.db.session import get_async_session
-from app.models import Contact, Pipeline, DealStage
+from app.models import Contact, Pipeline, DealStage, User
 
 faker = Faker()
 
 
-async def seed_pipelines(total: int = 10, contact_id: Optional[UUID] = None):
+async def seed_pipelines(total: int = 10, user_id: Optional[UUID] = None, contact_id: Optional[UUID] = None):
     db_gen = get_async_session()
     db = await anext(db_gen)
     query = await db.scalars(select(Contact))
     contacts = query.all()
+    query = await db.scalars(select(User))
+    users = query.all()
 
     now = datetime.now(timezone.utc)
     this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -36,6 +38,7 @@ async def seed_pipelines(total: int = 10, contact_id: Optional[UUID] = None):
             amount=faker.pyint(min_value=1),
             probability_of_close=faker.pyint(min_value=1, max_value=100),
             notes=faker.sentence(),
+            assigned_to=users[i % len(users)].id if not user_id else user_id,
         )
         db.add(pipeline)
 
@@ -48,15 +51,18 @@ async def seed_pipelines(total: int = 10, contact_id: Optional[UUID] = None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed leads into the database.")
+    parser = argparse.ArgumentParser(description="Seed pipelines into the database.")
     parser.add_argument(
-        "--total", type=int, default=10, help="Total number of leads to create"
+        "--total", type=int, default=10, help="Total number of pipelines to create"
     )
     parser.add_argument(
-        "--contact_id", type=UUID, help="Assign all leads to this user ID"
+        "--user_id", type=UUID, help="Assign all pipelines to this user ID"
+    )
+    parser.add_argument(
+        "--contact_id", type=UUID, help="Assign all pipelines to this contact ID"
     )
     args = parser.parse_args()
 
     print(f"Running database seed for {args.total} pipelines...")
-    asyncio.run(seed_pipelines(total=args.total, contact_id=args.contact_id))
+    asyncio.run(seed_pipelines(total=args.total, user_id=args.user_id, contact_id=args.contact_id))
     print("Seed completed!")

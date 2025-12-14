@@ -1,4 +1,3 @@
-from math import ceil
 from uuid import UUID
 
 from app.exceptions import AppException
@@ -33,17 +32,9 @@ class PipelineService:
             load_user=True,
             load_contact=True,
         )
-        if not total or not query_params.limit:
-            total_pages = 1
-            query_params.page = 1
-        else:
-            total_pages = ceil(total / query_params.limit)
         stats = await self.repo.get_pipeline_stats()
         return {
             "total": total,
-            "page": query_params.page,
-            "limit": query_params.limit,
-            "total_pages": total_pages,
             "stats": stats,
             "pipelines": pipelines,
         }
