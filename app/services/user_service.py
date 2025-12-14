@@ -1,65 +1,115 @@
 from uuid import UUID
-from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.schemas.user_schema import UserCreate, UserUpdate
-from app.models.user_model import User, UserStatus
-from app.repository.user_repository import UserRepository
-from app.utils.hashing import Hasher
+from pydantic import EmailStr
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core import hash_password, verify_password
+from app.exceptions import AppException
+from app.models import User, UserRole, UserStatus
+from app.repositories import UserRepository
+from app.schemas import UserCreateRequest, UserUpdateRequest
+from app.schemas import UserGetQuery, ErrorCode
 
 
 class UserService:
+
     def __init__(self, db: AsyncSession):
         self.repo = UserRepository(db)
 
-    async def create(self, data: UserCreate) -> User:
-        existing = await self.repo.get_by_email(data.email)
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
+    async def authenticate(self, email: EmailStr, password: str) -> User:
+        user = await self.repo.get_by_email(email)
+
+        if not user or not verify_password(password, user.password):
+            raise AppException(
+                code=ErrorCode.AUTH_REQUIRED,
+                status_code=401,
+                message="Invalid email or password",
             )
 
-        new_user = User(
-            fullname=data.fullname,
-            email=data.email,
-            password=Hasher.hash(data.password),
-            employee_id=data.employee_id,
-            department_id=data.department_id,
-            role_id=data.role_id,
-            status=data.status or UserStatus.PENDING,
-        )
-
-        try:
-            return await self.repo.create(new_user)
-        except IntegrityError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Duplicate data detected",
-            )
-
-    async def get(self, user_id: UUID) -> User:
-        user = await self.repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
         return user
 
-    async def list(self, search: str | None, limit: int = 10, offset: int = 0):
-        return await self.repo.list(search, limit, offset)
+    async def find_by_id(self, user_id: UUID):
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise AppException(
+                code=ErrorCode.NOT_FOUND, status_code=404, message="User not found"
+            )
+        return user
 
-    async def update(self, user_id: UUID, data: UserUpdate) -> User:
-        user = await self.get(user_id)
+    async def find_all_users(
+        self,
+        query_params: UserGetQuery,
+    ):
 
-        updates = data.dict(exclude_unset=True)
-        if "password" in updates:
-            updates["password"] = Hasher.hash(updates["password"])
+        users, total = await self.repo.list_users(query_params=query_params)
 
-        for field, value in updates.items():
-            setattr(user, field, value)
+        return {
+            "users": users,
+            "total": total,
+            "page": query_params.page,
+            "limit": query_params.limit,
+            "total_pages": (total + query_params.limit - 1) // query_params.limit,
+        }
+
+    async def create(self, req: UserCreateRequest):
+        existing = await self.repo.get_by_email(req.email)
+        if existing:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Email already registered",
+            )
+
+        avatar = req.fullname[:2].upper() if req.fullname else None
+
+        user = User(
+            fullname=req.fullname,
+            email=req.email,
+            password=hash_password(req.password),
+            avatar_initial=avatar,
+            role=req.role or UserRole.ADMIN,
+            status=req.status or UserStatus.ACTIVE,
+        )
+
+        return await self.repo.create(user)
+
+    async def update(self, user_id: UUID, req: UserUpdateRequest):
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise AppException(
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            )
+
+        if req.email and req.email != user.email:
+            if await self.repo.get_by_email(req.email):
+                raise AppException(
+                    status_code=400,
+                    code=ErrorCode.VALIDATION_ERROR,
+                    message="Email already taken",
+                )
+            user.email = req.email
+
+        if req.fullname:
+            user.fullname = req.fullname
+            user.avatar_initial = req.fullname[:2].upper()
+
+        if req.password:
+            user.password = hash_password(req.password)
+
+        if req.role:
+            user.role = req.role
+
+        if req.status:
+            user.status = req.status
 
         return await self.repo.update(user)
 
     async def delete(self, user_id: UUID):
-        user = await self.get(user_id)
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise AppException(
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            )
+
         await self.repo.delete(user)
+        return {"message": "User deleted successfully"}

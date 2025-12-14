@@ -22,9 +22,9 @@ class UserRegisterRequest(SQLModel):
     email: EmailStr
     password: str
     company_name: str
-    avatar_initial: str #
-    role: str #
-    status: str #
+    avatar_initial: str  #
+    role: str  #
+    status: str  #
 
 
 class UserRegisterResponse(SQLModel):
