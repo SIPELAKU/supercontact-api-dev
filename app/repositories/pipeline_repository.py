@@ -140,7 +140,6 @@ class PipelineRepository:
         result = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(result)
 
-        # PAGINATION
         result = await self.db.scalars(query)
         pipelines = result.all()
 

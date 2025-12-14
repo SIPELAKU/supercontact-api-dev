@@ -40,13 +40,14 @@ class ProductRepository:
         if query_params.search:
             query = query.where(Product.product_name.ilike(f"%{query_params.search}%"))
 
-        total_data = select(func.count()).select_from(query.subquery())
-        total = await self.db.scalar(total_data)
-
         # PAGINATION
         offset = (query_params.page - 1) * query_params.limit
-        result = await self.db.scalars(query.offset(offset).limit(query_params.limit))
+        query = query.offset(offset).limit(query_params.limit)
+        result = await self.db.scalars(query)
         products = result.all()
+
+        total_data = select(func.count()).select_from(query.subquery())
+        total = await self.db.scalar(total_data)
 
         return products, total
 

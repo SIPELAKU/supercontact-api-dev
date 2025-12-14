@@ -68,13 +68,14 @@ class LeadRepository:
         else:
             query = query.order_by(Lead.created_at.asc())
 
-        total_query = select(func.count()).select_from(query.subquery())
-        total = await self.db.scalar(total_query)
-
         # PAGINATION
         offset = (query_params.page - 1) * query_params.limit
-        result = await self.db.scalars(query.offset(offset).limit(query_params.limit))
+        query = query.offset(offset).limit(query_params.limit)
+        result = await self.db.scalars(query)
         leads = result.all()
+
+        total_query = select(func.count()).select_from(query.subquery())
+        total = await self.db.scalar(total_query)
 
         return leads, total
 
