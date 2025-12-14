@@ -8,6 +8,7 @@ from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.models.contact_model import UserTaskLink
+from app.models.position_enum import UserPosition
 
 
 class UserStatus(StrEnum):
@@ -86,9 +87,12 @@ class User(SQLModel, table=True):
 
     fullname: str = Field(sa_column=Column(String(255), nullable=False))
     email: str = Field(sa_column=Column(String(255), unique=True, nullable=False))
+    phone: str = Field(sa_column=Column(String(255), nullable=False))
+    company: str = Field(sa_column=Column(String(255), nullable=False))
+    position: UserPosition = Field(sa_column=Column(String(50), nullable=False))
     password: str = Field(sa_column=Column(Text, nullable=False))
-    avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
 
+    avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
     role: Optional[UUID] = Field(foreign_key="user_roles.id")
     status: Optional[UserStatus] = Field(
         default=UserStatus.ACTIVE,
@@ -127,6 +131,7 @@ class User(SQLModel, table=True):
         back_populates="users",
         link_model=UserTaskLink
     )
+    detail: List["UserDetail"] = Relationship(back_populates="user")
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),

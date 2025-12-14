@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import SQLModel
+from app.models.position_enum import UserPosition
 
 
 class User(SQLModel):
@@ -20,11 +21,11 @@ class User(SQLModel):
 class UserRegisterRequest(SQLModel):
     fullname: str
     email: EmailStr
+    phone: str
+    company: str
+    position: UserPosition
     password: str
-    company_name: str
-    avatar_initial: str #
-    role: str #
-    status: str #
+    confirm_password: str
 
 
 class UserRegisterResponse(SQLModel):

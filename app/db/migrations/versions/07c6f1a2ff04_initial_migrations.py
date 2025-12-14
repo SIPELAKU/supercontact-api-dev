@@ -1,7 +1,7 @@
 """initial migrations
 
 Revision ID: 07c6f1a2ff04
-Revises: 
+Revises:
 Create Date: 2025-12-09 12:55:59.395017
 
 """
@@ -55,6 +55,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('fullname', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('phone', sa.String(length=255), nullable=False),
+    sa.Column('company', sa.String(length=255), nullable=False),
+    sa.Column('position', sa.String(length=50), nullable=False),
     sa.Column('password', sa.Text(), nullable=False),
     sa.Column('avatar_initial', sa.String(length=2), nullable=False),
     sa.Column('role', sa.Uuid(), nullable=True),
