@@ -22,7 +22,11 @@ async def get_contact_service(db: AsyncSession = Depends(get_async_session)):
     return ContactService(db=db)
 
 
-@router.get("/", response_model=PaginatedContacts, dependencies=[Depends(auth_require)])
+@router.get(
+    "/",
+    response_model=ResponseModel[PaginatedContacts],
+    # dependencies=[Depends(auth_require)]
+)
 async def get_all_contacts(
         page: int = 1,
         limit: int = 10,
@@ -30,7 +34,6 @@ async def get_all_contacts(
         sort_by: str = "name",
         sort_order: str = "asc",
         service: ContactService = Depends(get_contact_service),
-        current_user=Depends(auth_require)
 ):
     query = type("Query", (), {
         "page": page,
@@ -39,18 +42,14 @@ async def get_all_contacts(
         "sort_by": sort_by,
         "sort_order": sort_order
     })
-    result = await service.find_all_contacts(user_id=current_user.id, query=query)
-    contacts = [ContactResponse.model_validate(c) for c in result["data"]]
-
-    return PaginatedContacts(
-        status="success",
-        message="Contact List",
+    result = await service.find_all_contacts(query=query)
+    return ResponseModel(data=PaginatedContacts(
         total=result["total"],
         page=result["page"],
         limit=result["limit"],
         total_pages=result["total_pages"],
-        data=contacts
-    )
+        contacts=result["contacts"]
+    ))
 
 
 @router.post("/", response_model=ResponseModel[ContactResponse],
@@ -115,7 +114,7 @@ async def get_all_notes(
 
 
 # CREATE TASK
-@router.post("/{contact_id}/tasks", response_model=ResponseModel[TaskResponse], dependencies=[Depends(auth_require)]) #
+@router.post("/{contact_id}/tasks", response_model=ResponseModel[TaskResponse], dependencies=[Depends(auth_require)])  #
 async def create_task(
         contact_id: UUID,
         data: TaskCreate,

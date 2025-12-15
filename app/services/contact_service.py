@@ -20,16 +20,19 @@ class ContactService:
         contact = await self.repo.create(Contact(user_id=user_id, **data.model_dump()))
         return contact
 
-    async def find_all_contacts(self, user_id: UUID, query):
-        contacts, total = await self.repo.get_all(user_id=user_id, query=query)
-        total_pages = ceil(total / query.limit) if total else 1
+    async def find_all_contacts(self, query):
+        contacts, total = await self.repo.get_all(query=query)
+        if query.limit == 0:
+            total_pages = 1
+        else:
+            total_pages = ceil(total / query.limit) if total else 1
 
         return {
             "total": total,
             "page": query.page,
             "limit": query.limit,
             "total_pages": total_pages,
-            "data": contacts
+            "contacts": contacts
         }
 
     async def find_one_contact(self, user_id: UUID, contact_id: UUID):
