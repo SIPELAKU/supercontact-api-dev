@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Optional
+from typing import List
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Enum, Index, Text
+from sqlalchemy import Column, DateTime, Enum, Index, Text, String
 from sqlmodel import Relationship, SQLModel, Field
 
 
@@ -20,13 +20,6 @@ class LeadCompanySize(StrEnum):
     SMALL = "1 - 50 Karyawan"
     MEDIUM = "51 - 200 Karyawan"
     LARGE = "201+ Karyawan"
-
-
-class LeadOfficeLocation(StrEnum):
-    JAKARTA = "DKI Jakarta"
-    BANDUNG = "Bandung"
-    YOGYAKARTA = "Yogyakarta"
-    MALANG = "Malang"
 
 
 class LeadTag(StrEnum):
@@ -47,8 +40,8 @@ class LeadStatus(StrEnum):
     CONTACTED = "Contacted"
     QUALIFIED = "Qualified"
     PROPOSAL = "Proposal"
-    CLOSED_WON = "Closed Won"
-    CLOSED_LOST = "Closed Lost"
+    CLOSED_WON = "Closed - Won"
+    CLOSED_LOST = "Closed - Lost"
 
 
 class Lead(SQLModel, table=True):
@@ -56,8 +49,8 @@ class Lead(SQLModel, table=True):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    lead_name: UUID = Field(foreign_key="contacts.id", nullable=False)
 
+    contact_id: UUID = Field(foreign_key="contacts.id", nullable=False)
     industry: LeadIndustry = Field(
         sa_column=Column(
             Enum(
@@ -80,17 +73,7 @@ class Lead(SQLModel, table=True):
             nullable=False
         )
     )
-    office_location: LeadOfficeLocation = Field(
-        sa_column=Column(
-            Enum(
-                LeadOfficeLocation,
-                name="lead_office_location_enum",
-                native_enum=False,
-                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-            ),
-            nullable=False
-        )
-    )
+    office_location: str = Field(sa_column=Column(String(255), nullable=False))
     lead_status: LeadStatus = Field(
         sa_column=Column(
             Enum(
@@ -140,8 +123,9 @@ class Lead(SQLModel, table=True):
             onupdate=lambda: datetime.now(timezone.utc),
         ),
     )
-    user: Optional["User"] = Relationship(back_populates="leads")
-    contact: Optional["Contact"] = Relationship(back_populates="lead")
+    user: "User" = Relationship(back_populates="leads")
+    contact: "Contact" = Relationship(back_populates="lead")
+    quotations: List["Quotation"] = Relationship(back_populates="lead")
 
     __table_args__ = (
         Index("idx_lead_status", "lead_status"),

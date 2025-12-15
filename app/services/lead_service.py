@@ -27,7 +27,7 @@ class LeadService:
 
     # FIND ALL LEADS
     async def find_all_leads(self, query_params: LeadGetQuery):
-        leads, total = await self.repo.get_all(query_params=query_params, load_user=True)
+        leads, total = await self.repo.get_all(query_params=query_params, load_user=True, load_contact=True)
         total_pages = ceil(total / query_params.limit) if total else 1
 
         return {
@@ -72,3 +72,15 @@ class LeadService:
             )
 
         return await self.repo.update_status(lead=lead, payload=payload, load_user=True, load_contact=True)
+
+    # DELETE LEAD STATUS BY ID
+    async def delete_lead(self, lead_id: UUID):
+        lead = await self.repo.get_by_id(lead_id=lead_id)
+        if not lead:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="Lead not found"
+            )
+
+        return await self.repo.delete(lead=lead)

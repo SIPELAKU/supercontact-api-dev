@@ -21,6 +21,7 @@ class Contact(SQLModel, table=True):
 
     user: Optional["User"] = Relationship(back_populates="contacts")
     lead: Optional["Lead"] = Relationship(back_populates="contact")
+    pipeline: Optional["Pipeline"] = Relationship(back_populates="contact")
 
     tasks: List["ContactTask"] = Relationship(
         back_populates="contact",
