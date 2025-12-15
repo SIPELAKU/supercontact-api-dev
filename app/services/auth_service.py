@@ -4,7 +4,7 @@ from app.core import verify_password, create_access_token
 from app.exceptions import AppException
 from app.models import User
 from app.repositories import UserRepository
-from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest
+from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.schemas.error_schema import ErrorCode
 from app.core.security import hash_password
 
@@ -34,10 +34,13 @@ class AuthService:
         def generate_avatar_initial(fullname: str) -> str:
             if not fullname:
                 return ""
+
             parts = fullname.strip().split()
-            if len(parts) == 1:
-                return parts[0][0].upper()
-            return (parts[0][0] + parts[-1][0]).upper()
+
+            if len(parts) >= 2:
+                return (parts[0][0] + parts[-1][0]).upper()
+
+            return parts[0][0].upper()
 
         avatar_initial = generate_avatar_initial(payload.fullname)
 
@@ -69,3 +72,26 @@ class AuthService:
 
         access_token = self.create_token(user)
         return user, access_token
+
+    async def forgot_password(self, payload: ForgotPasswordRequest):
+        user = await self.repo.get_by_email(email=payload.email)
+        if not user:
+            raise AppException(
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            )
+
+        reset_token = create_access_token({"sub": str(user.id), "type": "reset"})
+        return reset_token
+
+    async def reset_password(self, payload: ResetPasswordRequest):
+        user = await self.repo.get_by_email(payload.email)
+        if not user:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="User not found"
+            )
+
+        user.password = hash_password(payload.new_password)
+        await self.repo.commit()
+        return "Password updated successfully"

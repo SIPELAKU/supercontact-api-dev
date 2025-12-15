@@ -70,3 +70,6 @@ class UserRepository:
 
     async def get_total(self):
         return await self.db.scalar(select(func.count()).select_from(User))
+
+    async def commit(self):
+        await self.db.commit()

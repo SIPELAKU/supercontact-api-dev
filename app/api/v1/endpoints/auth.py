@@ -3,7 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_async_session
 from app.schemas import ResponseModel, UserLoginResponse, UserLoginRequest
-from app.schemas.auth_schema import UserRegisterResponse, UserRegisterRequest
+from app.schemas.auth_schema import UserRegisterResponse, UserRegisterRequest, ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse
 from app.services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -37,3 +37,24 @@ async def user_login(
             access_token=access_token,
         )
     )
+
+
+# USER FORGOT PASSWORD
+@router.post("/forgot-password", response_model=ResponseModel[ForgotPasswordResponse])
+async def forgot(
+        payload: ForgotPasswordRequest, service: AuthService = Depends(get_auth_service)
+):
+    reset_token = await service.forgot_password(payload)
+    return ResponseModel(
+        data=ForgotPasswordResponse(reset_token=reset_token)
+    )
+
+@router.post("/reset-password", response_model=ResponseModel[ResetPasswordResponse])
+async def reset(
+        payload: ResetPasswordRequest, service: AuthService = Depends(get_auth_service)
+):
+    message = await service.reset_password(payload)
+    return ResponseModel(
+        data=ResetPasswordResponse(message=message)
+    )
+
