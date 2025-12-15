@@ -1,8 +1,9 @@
 from datetime import timezone, datetime
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, or_
+from sqlmodel import select, func, or_, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
@@ -15,6 +16,15 @@ class QuotationRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def generate_quotation_number(self) -> str:
+        year = datetime.now(timezone.utc).strftime("%y")
+        seq_name = f"quotation_{year}_seq"
+
+        result = await self.db.exec(text(f"SELECT nextval('{seq_name}')"))
+        seq = result.scalar_one()
+
+        return f"QUO-{year}-{seq:03d}"
+
     async def get_by_id(self, quotation_id: UUID):
         query = (
             select(Quotation)
@@ -24,7 +34,10 @@ class QuotationRepository:
                     selectinload(QuotationItem.product)
                 ),
                 selectinload(Quotation.lead).options(
-                    selectinload(Lead.contact)
+                    selectinload(Lead.contact),
+                ),
+                selectinload(Quotation.lead).options(
+                    selectinload(Lead.user)
                 )
             )
         )
@@ -35,8 +48,10 @@ class QuotationRepository:
 
     async def create(self, payload: QuotationRequest):
         grand_total = 0
+        quotation_number = await self.generate_quotation_number()
         quotation = Quotation(
             lead_id=payload.lead_id,
+            quotation_number=quotation_number,
             quotation_title=payload.quotation_title,
             expire_date=payload.expire_date,
             grand_total=grand_total,
@@ -53,15 +68,15 @@ class QuotationRepository:
 
             unit_price = product.price
             subtotal = unit_price * item.quantity
-            grand_total += subtotal
+            grand_total += subtotal * (Decimal("1") - (Decimal(item.discount) / Decimal("100")))
 
             quotation_item = QuotationItem(
                 quotation_id=quotation.id,
                 product_id=item.product_id,
                 quantity=item.quantity,
                 unit_price=unit_price,
-                subtotal=subtotal,
                 notes=item.notes,
+                discount=item.discount,
             )
             self.db.add(quotation_item)
 
@@ -83,7 +98,8 @@ class QuotationRepository:
                     selectinload(QuotationItem.product)
                 ),
                 selectinload(Quotation.lead).options(
-                    selectinload(Lead.contact)
+                    selectinload(Lead.contact),
+                    selectinload(Lead.user)
                 )
             )
         )

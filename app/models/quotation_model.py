@@ -15,6 +15,7 @@ class Quotation(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     lead_id: UUID = Field(foreign_key="leads.id", nullable=False)
+    quotation_number: str = Field(sa_column=Column(String(10), nullable=False))
     quotation_title: str = Field(sa_column=Column(String(255), nullable=False))
     expire_date: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     grand_total: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
@@ -54,8 +55,8 @@ class QuotationItem(SQLModel, table=True):
 
     quantity: int = Field(sa_column=Column(Integer, nullable=False))
     unit_price: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
-    subtotal: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
     notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
+    discount: int = Field(ge=0, le=100, default=0)
 
     quotation: "Quotation" = Relationship(back_populates="items")
-    product: "Product" = Relationship()
+    product: "Product" = Relationship(back_populates="quotation_items")

@@ -13,6 +13,12 @@ class Product(SQLModel):
     price: float
 
 
+class User(SQLModel):
+    id: UUID
+    fullname: str
+    email: EmailStr
+
+
 class Contact(SQLModel):
     id: UUID
     name: str
@@ -25,6 +31,7 @@ class Lead(SQLModel):
     id: UUID
     office_location: str
     contact: Contact
+    user: User
 
 
 class QuotationGetQuery(SQLModel):
@@ -39,6 +46,7 @@ class QuotationItemRequest(SQLModel):
     product_id: UUID
     quantity: int
     notes: Optional[str]
+    discount: int
 
 
 class QuotationRequest(SQLModel):
@@ -54,7 +62,6 @@ class QuotationItemResponse(SQLModel):
     product_id: UUID
     quantity: int
     unit_price: float
-    subtotal: float
     notes: Optional[str]
     product: Product
 
@@ -62,6 +69,7 @@ class QuotationItemResponse(SQLModel):
 class QuotationResponse(SQLModel):
     id: UUID
     lead_id: UUID
+    quotation_number: str
     quotation_title: str
     expire_date: datetime
     grand_total: float
