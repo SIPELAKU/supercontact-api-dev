@@ -4,7 +4,8 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import SQLModel
-from app.models.position_enum import UserPosition
+
+from app.models import UserPosition
 
 
 class User(SQLModel):

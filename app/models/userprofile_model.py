@@ -1,8 +1,8 @@
-from typing import Optional, List
-from uuid import uuid4, UUID
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Relationship, Column, DateTime
-from sqlalchemy import func
+from typing import Optional
+from uuid import uuid4, UUID
+
+from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, Text, String
 
 
 class UserDetail(SQLModel, table=True):
@@ -11,11 +11,11 @@ class UserDetail(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="users.id")
 
-    country: Optional[str] = Field(default=None)
-    language: Optional[str] = Field(default=None)
-    phone: Optional[str] = Field(default=None)
-    skype: Optional[str] = Field(default=None)
-    bio: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
+    language: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
+    phone: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
+    skype: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
+    bio: Optional[str] = Field(sa_column=Column(Text, nullable=False))
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

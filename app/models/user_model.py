@@ -7,13 +7,20 @@ from pydantic import ConfigDict
 from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.contact_model import UserTaskLink
-from app.models.position_enum import UserPosition
+from app.models import UserTaskLink
 
 
 class UserStatus(StrEnum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
+
+
+class UserPosition(StrEnum):
+    BUSINESS_OWNER = "Business Owner"
+    C_LEVEL = "C-Level"
+    SENIOR_MANAGER = "Senior Manager"
+    STAFF = "Staff"
+    OTHER = "Lainnya"
 
 
 def utc_now():
@@ -89,7 +96,17 @@ class User(SQLModel, table=True):
     email: str = Field(sa_column=Column(String(255), unique=True, nullable=False))
     phone: str = Field(sa_column=Column(String(255), nullable=False))
     company: str = Field(sa_column=Column(String(255), nullable=False))
-    position: UserPosition = Field(sa_column=Column(String(50), nullable=False))
+    position: UserPosition = Field(
+        sa_column=Column(
+            Enum(
+                UserPosition,
+                name="user_position_enum",
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
+                native_enum=False
+            ),
+            nullable=False,
+        ),
+    )
     password: str = Field(sa_column=Column(Text, nullable=False))
 
     avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
