@@ -143,19 +143,6 @@ class ManageUser(SQLModel, table=True):
         )
     )
 
-    leads: List["Lead"] = Relationship(back_populates="user")
-
-    pipelines: List["Pipeline"] = Relationship(back_populates="user")
-
-    contacts: List["Contact"] = Relationship(back_populates="user")
-
-    contact_tasks: List["ContactTask"] = Relationship(
-        back_populates="users",
-        link_model=UserTaskLink,
-    )
-
-    details: List["UserDetail"] = Relationship(back_populates="user")
-
     def is_active(self) -> bool:
         return self.status == UserStatus.ACTIVE
 
