@@ -1,8 +1,8 @@
-"""initial migrations
+"""add mailings
 
-Revision ID: 1de340673c02
+Revision ID: cd51b8d6e63d
 Revises: 
-Create Date: 2025-12-15 11:21:52.309875
+Create Date: 2025-12-16 22:06:31.964292
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1de340673c02'
+revision: str = 'cd51b8d6e63d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -80,6 +80,18 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
+    )
+    op.create_table('mailings',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('subject', sa.String(length=255), nullable=False),
+    sa.Column('status', sa.String(length=255), nullable=False),
+    sa.Column('sent_date', sa.String(length=255), nullable=False),
+    sa.Column('statistic', sa.String(length=255), nullable=False),
+    sa.Column('created_by', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user_details',
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -199,6 +211,7 @@ def downgrade() -> None:
     op.drop_table('contact_tasks')
     op.drop_table('contact_notes')
     op.drop_table('user_details')
+    op.drop_table('mailings')
     op.drop_table('contacts')
     op.drop_index('idx_user_fullname', table_name='users')
     op.drop_index('idx_user_email', table_name='users')

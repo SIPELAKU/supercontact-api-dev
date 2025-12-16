@@ -54,3 +54,10 @@ from .user_schema import (
     UserResponse,
     UserGetQuery
 )
+from .mailing_schema import (
+    MailingCreate,
+    MailingDeleteResponse,
+    MailingResponse,
+    MailingUpdate,
+    PaginatedMailings
+)

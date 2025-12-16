@@ -13,3 +13,4 @@ from .product_model import Product
 from .quotation_model import Quotation, QuotationItem
 from .user_model import User, UserRole, UserStatus, RolePermission, UserPosition
 from .userprofile_model import UserDetail
+from .mailing_model import Mailing

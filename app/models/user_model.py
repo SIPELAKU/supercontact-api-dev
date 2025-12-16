@@ -150,6 +150,7 @@ class User(SQLModel, table=True):
         link_model=UserTaskLink
     )
     detail: List["UserDetail"] = Relationship(back_populates="user")
+    mailings: List["Mailing"] = Relationship(back_populates="user")
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),
