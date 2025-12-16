@@ -34,8 +34,8 @@ class UserLevel(StrEnum):
     MANAGER = "Manager"
 
 
-# USER
-class User(SQLModel, table=True):
+# MANAGE USER
+class ManageUser(SQLModel, table=True):
     __tablename__ = "manage_users"
     model_config = ConfigDict(from_attributes=True)
 
