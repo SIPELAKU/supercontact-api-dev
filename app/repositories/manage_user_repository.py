@@ -5,12 +5,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.user_model import User, UserStatus, UserLevel
-from app.schemas.error_schema import ErrorCode
 from app.exceptions import AppException
+from app.models import User, UserStatus, UserLevel
+from app.schemas import ErrorCode
 
 
-class UserRepository:
+class ManageUserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 

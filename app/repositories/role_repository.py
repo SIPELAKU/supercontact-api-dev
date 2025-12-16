@@ -5,8 +5,8 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.role_model import Role, RolePermission
-from app.repository.permission_repository import PermissionRepository
+from app.models import Role, RolePermission
+from app.repositories import PermissionRepository
 
 
 class RoleRepository:

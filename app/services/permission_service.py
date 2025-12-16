@@ -1,7 +1,9 @@
-from sqlalchemy import select
 from uuid import UUID
+
+from sqlalchemy import select
+
 from app.models.role_model import Permission, Role
-from app.repository.permission_repository import PermissionRepository
+from app.repositories import PermissionRepository
 
 
 class PermissionService:
@@ -23,9 +25,9 @@ class PermissionService:
         return perm
 
     async def assign_roles(
-        self,
-        permission_id: UUID,
-        role_ids: list[UUID],
+            self,
+            permission_id: UUID,
+            role_ids: list[UUID],
     ):
         perm = await self.repo.get_permission_by_id(permission_id)
         if not perm:
@@ -42,8 +44,8 @@ class PermissionService:
         await self.repo.assign_roles(permission_id, role_ids)
 
     async def remove_role(
-        self,
-        permission_id: UUID,
-        role_id: UUID,
+            self,
+            permission_id: UUID,
+            role_id: UUID,
     ):
         await self.repo.remove_role(permission_id, role_id)

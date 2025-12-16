@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import hash_password, verify_password
 from app.exceptions import AppException
-from app.models import User, UserRole, UserStatus
+from app.models import User, UserStatus
 from app.repositories import UserRepository
 from app.schemas import UserCreateRequest, UserUpdateRequest
 from app.schemas import UserGetQuery, ErrorCode
@@ -37,8 +37,8 @@ class UserService:
         return user
 
     async def find_all_users(
-        self,
-        query_params: UserGetQuery,
+            self,
+            query_params: UserGetQuery,
     ):
 
         users, total = await self.repo.list_users(query_params=query_params)
@@ -67,7 +67,7 @@ class UserService:
             email=req.email,
             password=hash_password(req.password),
             avatar_initial=avatar,
-            role=req.role or UserRole.ADMIN,
+            role=None,
             status=req.status or UserStatus.ACTIVE,
         )
 

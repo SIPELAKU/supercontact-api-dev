@@ -1,21 +1,19 @@
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.auth import auth_require
+from app.core import auth_require
 from app.db import get_async_session
-from app.models.role_model import Role
-from app.models.user_model import User
 from app.exceptions import AppException
-from app.schemas.error_schema import ErrorCode
+from app.models import Role, User
+from app.schemas import ErrorCode
 
 
 async def get_current_role(
-    user: User = Depends(auth_require),
-    db: AsyncSession = Depends(get_async_session),
+        user: User = Depends(auth_require),
+        db: AsyncSession = Depends(get_async_session),
 ) -> Role:
-
     if not user.role_id:
         raise AppException(
             status_code=403,

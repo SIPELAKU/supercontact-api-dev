@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID, uuid4
+
 from pydantic import ConfigDict
-from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, String, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlmodel import SQLModel, Field, Relationship
 
 
 def utc_now():
@@ -57,7 +58,7 @@ class Role(SQLModel, table=True):
         )
     )
 
-    users: List["User"] = Relationship(back_populates="role")
+    manage_users: List["ManageUser"] = Relationship(back_populates="role")
     permissions: List["Permission"] = Relationship(
         back_populates="roles", link_model=RolePermission
     )

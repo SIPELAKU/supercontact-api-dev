@@ -4,25 +4,16 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.user_model import User
-from app.models.role_model import Role
-from app.models.department_model import Department
-from app.models.branch_model import Branch
-from app.schemas.user_schema import (
-    UserCreateRequest,
-    UserUpdateRequest,
-)
 from app.exceptions import AppException
-from app.schemas.error_schema import ErrorCode
-from app.repository.user_repository import UserRepository
-from app.repository.auth_repository import AuthRepository
+from app.models import Department, Role, User
+from app.repositories import UserRepository
+from app.schemas import ErrorCode, UserCreateRequest, UserUpdateRequest
 
 
-class UserService:
+class ManageUserService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = UserRepository(db)
-        self.auth_repo = AuthRepository(db)
 
     async def _get_role_by_name(self, role_name: str) -> Role:
         result = await self.db.execute(select(Role).where(Role.role_name == role_name))
@@ -32,7 +23,7 @@ class UserService:
         return role
 
     async def _get_department_by_name(
-        self, department_name: Optional[str]
+            self, department_name: Optional[str]
     ) -> Optional[Department]:
         if not department_name:
             return None
@@ -45,34 +36,34 @@ class UserService:
             raise AppException(ErrorCode.DEPARTMENT_NOT_FOUND, "Department not found")
         return department
 
-    async def _get_branch_by_name(self, branch_name: Optional[str]) -> Optional[Branch]:
-        if not branch_name:
-            return None
+    # async def _get_branch_by_name(self, branch_name: Optional[str]) -> Optional[Branch]:
+    #     if not branch_name:
+    #         return None
+    #
+    #     result = await self.db.execute(select(Branch).where(Branch.name == branch_name))
+    #     branch = result.scalars().first()
+    #     if not branch:
+    #         raise AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found")
+    #     return branch
 
-        result = await self.db.execute(select(Branch).where(Branch.name == branch_name))
-        branch = result.scalars().first()
-        if not branch:
-            raise AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found")
-        return branch
-
-    async def _validate_branch_belongs_to_department(
-        self,
-        branch: Optional[Branch],
-        department: Optional[Department],
-    ):
-        if not branch or not department:
-            return
-
-        if branch.department_id != department.id:
-            raise AppException(
-                ErrorCode.BRANCH_NOT_IN_DEPARTMENT,
-                "Branch does not belong to selected department",
-            )
+    # async def _validate_branch_belongs_to_department(
+    #         self,
+    #         branch: Optional[Branch],
+    #         department: Optional[Department],
+    # ):
+    #     if not branch or not department:
+    #         return
+    #
+    #     if branch.department_id != department.id:
+    #         raise AppException(
+    #             ErrorCode.BRANCH_NOT_IN_DEPARTMENT,
+    #             "Branch does not belong to selected department",
+    #         )
 
     async def _check_unique_employee_id(
-        self,
-        employee_id: Optional[str],
-        exclude_user_id: Optional[UUID] = None,
+            self,
+            employee_id: Optional[str],
+            exclude_user_id: Optional[UUID] = None,
     ):
         if not employee_id:
             return

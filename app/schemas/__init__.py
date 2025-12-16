@@ -25,6 +25,13 @@ from .lead_schema import (
     LeadUpdateStatus,
     LeadDeleteResponse,
 )
+from .manage_user_schema import (
+    ManageUserListResponse,
+    ManageUserResponse,
+    ManageUserCreateRequest,
+    ManageUserUpdateRequest,
+    ManagerDropdown
+)
 from .pipeline_schema import (
     PipelineRequest,
     PipelineGetQuery,
@@ -52,5 +59,6 @@ from .user_schema import (
     UserCreateRequest,
     UserUpdateRequest,
     UserResponse,
+    PaginatedUserResponse,
     UserGetQuery
 )

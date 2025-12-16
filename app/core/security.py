@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.exceptions import AppException
-from app.models import UserRole, UserStatus
+from app.models import UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
@@ -35,8 +35,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    data: dict,
-    expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES,
+        data: dict,
+        expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES,
 ) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
@@ -71,9 +71,9 @@ def decode_access_token(token: str) -> dict:
 
 
 async def auth_require(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db_session),
-) -> User:
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+        db: AsyncSession = Depends(get_db_session),
+):
     if not credentials:
         raise AppException(
             status_code=401,
@@ -109,7 +109,7 @@ async def auth_require(
     return user
 
 
-def check_roles(*allowed_roles: UserRole):
+def check_roles(*allowed_roles: str):
     async def depends_auth(user: User = Depends(auth_require)):
         if user.role not in allowed_roles:
             raise AppException(

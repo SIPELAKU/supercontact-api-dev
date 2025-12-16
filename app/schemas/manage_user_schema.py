@@ -20,7 +20,7 @@ class UserLevel(StrEnum):
 # REQUEST SCHEMAS
 
 
-class UserCreateRequest(BaseModel):
+class ManageUserCreateRequest(BaseModel):
     email: EmailStr
 
     role_id: UUID
@@ -35,7 +35,7 @@ class UserCreateRequest(BaseModel):
 # Update Manage User
 
 
-class UserUpdateRequest(BaseModel):
+class ManageUserUpdateRequest(BaseModel):
     role_id: Optional[UUID] = None
     department_id: Optional[UUID] = None
     branch_id: Optional[UUID] = None
@@ -48,7 +48,7 @@ class UserUpdateRequest(BaseModel):
 # RESPONSE SCHEMAS
 
 
-class UserResponse(BaseModel):
+class ManageUserResponse(BaseModel):
     id: UUID
     user_id: str
 
@@ -69,9 +69,9 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserListResponse(BaseModel):
+class ManageUserListResponse(BaseModel):
     total: int
-    items: List[UserResponse]
+    items: List[ManageUserResponse]
 
 
 # DROPDOWN / HELPER SCHEMAS

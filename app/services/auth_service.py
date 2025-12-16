@@ -4,8 +4,7 @@ from app.core import verify_password, create_access_token
 from app.core.security import hash_password
 from app.exceptions import AppException
 from app.models import User
-from app.repositories import UserRepository
-from app.repository.role_repository import RoleRepository
+from app.repositories import UserRepository, RoleRepository
 from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest
 from app.schemas.error_schema import ErrorCode
 

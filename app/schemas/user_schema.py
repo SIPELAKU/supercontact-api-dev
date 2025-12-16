@@ -1,49 +1,50 @@
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
 from uuid import UUID
-from app.models.user_model import UserStatus
+
+from fastapi import Query
+from pydantic import EmailStr
+from sqlmodel import SQLModel
+
+from app.models import UserStatus
 
 
-class UserBase(BaseModel):
+class UserGetQuery(SQLModel):
+    page: int = Query(1, ge=1)
+    limit: int = Query(10, ge=1, le=100)
+    search: Optional[str] = Query(None)
+    status: Optional[UserStatus] = Query(None)
+
+
+class UserBase(SQLModel):
     fullname: Optional[str] = None
     email: Optional[EmailStr] = None
     status: Optional[UserStatus] = None
-    employee_id: Optional[str] = None
-    department_id: Optional[UUID] = None
-    role_id: Optional[UUID] = None
 
 
-class UserCreate(BaseModel):
+class UserCreateRequest(SQLModel):
     fullname: str
     email: EmailStr
     password: str
-    role_id: UUID
-    status: Optional[UserStatus] = UserStatus.PENDING
-    employee_id: Optional[str] = None
-    department_id: Optional[UUID] = None
+    status: UserStatus
 
 
-class UserUpdate(BaseModel):
+class UserUpdateRequest(SQLModel):
     fullname: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     status: Optional[UserStatus] = None
-    role_id: Optional[UUID] = None
-    employee_id: Optional[str] = None
-    department_id: Optional[UUID] = None
 
 
 class UserResponse(UserBase):
     id: UUID
     avatar_initial: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
 
-class PaginatedUserResponse(BaseModel):
-    data: List[UserResponse]
+class PaginatedUserResponse(SQLModel):
     total: int
     page: int
-    page_size: int
+    limit: int
+    total_pages: int
+    users: List[UserResponse]
