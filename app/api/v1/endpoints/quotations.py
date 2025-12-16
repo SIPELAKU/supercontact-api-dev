@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_db_session
+from app.models import QuotationStatus
 from app.schemas import ResponseModel, QuotationResponse, QuotationListResponse, QuotationRequest
 from app.schemas.quotation_schema import QuotationGetQuery, QuotationDeleteResponse
 from app.services import QuotationService
@@ -28,17 +29,31 @@ async def get_all_quotations(
     return ResponseModel(data=data)
 
 
+# CREATE NEW QUOTATION (SAVE AS DRAFT)
+@router.post(
+    "",
+    response_model=ResponseModel[QuotationResponse],
+    #     dependencies=[Depends(auth_require)],
+)
+async def create_new_quotation_as_draft(
+        payload: QuotationRequest,
+        service: QuotationService = Depends(get_quotation_service)
+):
+    data = await service.create_quotation(payload=payload, status=QuotationStatus.PENDING)
+    return ResponseModel(data=data)
+
+
 # CREATE NEW QUOTATION
 @router.post(
     "",
     response_model=ResponseModel[QuotationResponse],
     #     dependencies=[Depends(auth_require)],
 )
-async def create_new_quotation(
+async def create_new_quotation_as_publish(
         payload: QuotationRequest,
         service: QuotationService = Depends(get_quotation_service)
 ):
-    data = await service.create_quotation(payload=payload)
+    data = await service.create_quotation(payload=payload, status=QuotationStatus.PENDING)
     return ResponseModel(data=data)
 
 

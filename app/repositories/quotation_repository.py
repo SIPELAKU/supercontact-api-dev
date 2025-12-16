@@ -7,7 +7,7 @@ from sqlmodel import select, func, or_, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
-from app.models import Quotation, Lead, QuotationItem, Contact, Product
+from app.models import Quotation, Lead, QuotationItem, Contact, Product, QuotationStatus
 from app.schemas import QuotationRequest, ErrorCode
 from app.schemas.quotation_schema import QuotationGetQuery
 
@@ -46,7 +46,7 @@ class QuotationRepository:
     async def get_product_by_id(self, product_id: UUID):
         return await self.db.scalar(select(Product).where(Product.id == product_id))
 
-    async def create(self, payload: QuotationRequest):
+    async def create(self, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
         quotation_number = await self.generate_quotation_number()
         quotation = Quotation(
@@ -81,7 +81,8 @@ class QuotationRepository:
             self.db.add(quotation_item)
 
         # UPDATE GRAND TOTAL
-        quotation.grand_total = grand_total
+        quotation.grand_total = round(grand_total)
+        quotation.quotation_status = status
 
         await self.db.commit()
         await self.db.refresh(quotation)

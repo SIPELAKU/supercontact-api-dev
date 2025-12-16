@@ -1,11 +1,17 @@
 from datetime import datetime, timezone
+from enum import StrEnum
 from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, String, Integer, Numeric, Text
+from sqlalchemy import Column, DateTime, String, Integer, Numeric, Text, Enum
 from sqlalchemy.orm import relationship
 from sqlmodel import SQLModel, Field, Relationship
+
+
+class QuotationStatus(StrEnum):
+    PENDING = "Pending"
+    ACCEPTED = "Accepted"
 
 
 class Quotation(SQLModel, table=True):
@@ -19,6 +25,18 @@ class Quotation(SQLModel, table=True):
     quotation_title: str = Field(sa_column=Column(String(255), nullable=False))
     expire_date: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     grand_total: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
+    quotation_status: QuotationStatus = Field(
+        sa_column=Column(
+            Enum(
+                QuotationStatus,
+                name="quotation_status_enum",
+                native_enum=False,
+                values_callable=lambda enum_cls: [enum.value for enum in enum_cls]
+            ),
+            nullable=False,
+            server_default=QuotationStatus.PENDING,
+        )
+    )
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

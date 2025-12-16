@@ -4,7 +4,9 @@ from uuid import UUID
 
 from fastapi import Query
 from pydantic import EmailStr
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
+
+from app.models import QuotationStatus
 
 
 class Product(SQLModel):
@@ -44,9 +46,9 @@ class QuotationGetQuery(SQLModel):
 
 class QuotationItemRequest(SQLModel):
     product_id: UUID
-    quantity: int
+    quantity: int = Field(gt=0)
     notes: Optional[str]
-    discount: int
+    discount: int = Field(ge=0, le=100)
 
 
 class QuotationRequest(SQLModel):
@@ -61,8 +63,9 @@ class QuotationItemResponse(SQLModel):
     quotation_id: UUID
     product_id: UUID
     quantity: int
-    unit_price: float
+    unit_price: int
     notes: Optional[str]
+    discount: int
     product: Product
 
 
@@ -72,7 +75,8 @@ class QuotationResponse(SQLModel):
     quotation_number: str
     quotation_title: str
     expire_date: datetime
-    grand_total: float
+    grand_total: int
+    quotation_status: QuotationStatus
     lead: Lead
     items: List[QuotationItemResponse]
     created_at: datetime

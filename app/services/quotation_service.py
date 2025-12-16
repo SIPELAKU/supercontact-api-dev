@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
+from app.models import QuotationStatus
 from app.repositories import QuotationRepository
 from app.schemas import ErrorCode, QuotationRequest
 from app.schemas.quotation_schema import QuotationGetQuery
@@ -25,8 +26,8 @@ class QuotationService:
         return quotation
 
     # CREATE NEW QUOTATION
-    async def create_quotation(self, payload: QuotationRequest):
-        return await self.repo.create(payload=payload)
+    async def create_quotation(self, payload: QuotationRequest, status: QuotationStatus):
+        return await self.repo.create(payload=payload, status=status)
 
     # GET ALL QUOTATIONS
     async def find_all_quotations(self, query_params: QuotationGetQuery):
