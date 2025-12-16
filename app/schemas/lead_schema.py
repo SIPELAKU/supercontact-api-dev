@@ -1,14 +1,12 @@
-from datetime import date
 from datetime import datetime
 from enum import StrEnum
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import Query
 from pydantic import EmailStr
 from sqlmodel import SQLModel
 
-from app.models import LeadSource, LeadStatus, LeadIndustry, LeadCompanySize, LeadOfficeLocation, LeadTag
+from app.models import LeadSource, LeadStatus, LeadIndustry, LeadCompanySize, LeadTag
 
 
 class Contact(SQLModel):
@@ -35,22 +33,22 @@ class LeadUpdateStatus(SQLModel):
 
 
 class LeadGetQuery(SQLModel):
-    page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=1, le=100)
-    lead_status: Optional[LeadStatus] = Query(None)
-    lead_source: Optional[LeadSource] = Query(None)
-    assigned_to: Optional[UUID] = Query(None)
-    date_from: Optional[date] = Query(None)
-    date_to: Optional[date] = Query(None)
-    search: Optional[str] = Query(None)
-    sort_order: SortOrder = Query(SortOrder.DESC)
+    page: int = 1
+    limit: int = 10
+    lead_status: Optional[List[LeadStatus]] = None
+    lead_source: Optional[List[LeadSource]] = None
+    assigned_to: Optional[List[UUID]] = None
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    search: Optional[str] = None
+    sort_order: SortOrder = SortOrder.DESC
 
 
 class LeadRequest(SQLModel):
-    lead_name: UUID
+    contact_id: UUID
     industry: LeadIndustry
     company_size: LeadCompanySize
-    office_location: LeadOfficeLocation
+    office_location: str
     lead_status: LeadStatus
     lead_source: LeadSource
     assigned_to: UUID
@@ -60,10 +58,10 @@ class LeadRequest(SQLModel):
 
 class LeadResponse(SQLModel):
     id: UUID
-    lead_name: UUID
+    contact_id: UUID
     industry: LeadIndustry
     company_size: LeadCompanySize
-    office_location: LeadOfficeLocation
+    office_location: str
     lead_status: LeadStatus
     lead_source: LeadSource
     assigned_to: UUID
@@ -80,3 +78,8 @@ class LeadListResponse(SQLModel):
     page: int
     total_pages: int
     leads: List[LeadResponse]
+
+
+class LeadDeleteResponse(SQLModel):
+    id: UUID
+    deleted: bool

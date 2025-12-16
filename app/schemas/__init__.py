@@ -22,14 +22,30 @@ from .lead_schema import (
     SortOrder,
     LeadRequest,
     LeadGetQuery,
-    LeadUpdateStatus
+    LeadUpdateStatus,
+    LeadDeleteResponse,
 )
 from .pipeline_schema import (
     PipelineRequest,
     PipelineGetQuery,
     PipelineResponse,
     PipelineUpdateStage,
-    PipelineListResponse
+    PipelineListResponse,
+    PipelineAssignedUsers,
+)
+from .product_schema import (
+    ProductGetQuery,
+    ProductResponse,
+    ProductRequest,
+    ProductListResponse,
+    ProductDeleteResponse,
+)
+from .quotation_schema import (
+    QuotationItemRequest,
+    QuotationRequest,
+    QuotationItemResponse,
+    QuotationResponse,
+    QuotationListResponse,
 )
 from .response_schema import ResponseModel
 from .user_schema import (

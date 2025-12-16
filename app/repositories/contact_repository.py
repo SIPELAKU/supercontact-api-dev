@@ -26,8 +26,13 @@ class ContactRepository:
         )
         return await self.db.scalar(query)
 
-    async def get_all(self, user_id: UUID, query):
-        q = select(Contact).where(Contact.user_id == user_id)
+    async def get_all(self, query):
+        q = select(Contact)
+
+        total = await self.db.scalar(select(func.count(Contact.id)))
+        if query.limit == 0:
+            result = await self.db.scalars(q)
+            return result.all(), total
 
         if query.search:
             like = f"%{query.search}%"
@@ -40,10 +45,6 @@ class ContactRepository:
         sort_column = getattr(Contact, query.sort_by, Contact.name)
         q = q.order_by(
             asc(sort_column) if query.sort_order == "asc" else desc(sort_column)
-        )
-
-        total = await self.db.scalar(
-            select(func.count(Contact.id)).where(Contact.user_id == user_id)
         )
 
         offset = (query.page - 1) * query.limit

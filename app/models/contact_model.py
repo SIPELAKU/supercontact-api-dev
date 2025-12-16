@@ -25,12 +25,12 @@ class Contact(SQLModel, table=True):
 
     tasks: List["ContactTask"] = Relationship(
         back_populates="contact",
-        sa_relationship_kwargs={"foreign_keys": "[ContactTask.contact_id]"}
+        sa_relationship_kwargs={"foreign_keys": "[ContactTask.contact_id]", "cascade": "all, delete-orphan"}
     )
 
     notes: List["ContactNote"] = Relationship(
         back_populates="contact",
-        sa_relationship_kwargs={"foreign_keys": "[ContactNote.contact_id]"}
+        sa_relationship_kwargs={"foreign_keys": "[ContactNote.contact_id]", "cascade": "all, delete-orphan"}
     )
 
 

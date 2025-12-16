@@ -14,9 +14,10 @@ class UserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    # ============================
+    # CREATE
+    # ============================
     async def create_user(self, user: User) -> User:
-        user.email = user.email.lower()
-
         try:
             self.db.add(user)
             await self.db.commit()
@@ -27,21 +28,23 @@ class UserRepository:
             await self.db.rollback()
             msg = str(e.orig).lower()
 
-            if "email" in msg:
-                raise AppException(ErrorCode.EMAIL_ALREADY_EXISTS)
+            if "user_id" in msg:
+                raise AppException(ErrorCode.USER_ID_ALREADY_EXISTS)
 
             if "employee_id" in msg:
                 raise AppException(ErrorCode.EMPLOYEE_ID_ALREADY_EXISTS)
 
             raise AppException(ErrorCode.DATABASE_ERROR)
 
-    async def get_user_by_id(self, user_id: UUID) -> Optional[User]:
-        result = await self.db.execute(select(User).where(User.id == user_id))
+    # ============================
+    # GET
+    # ============================
+    async def get_user_by_id(self, id: UUID) -> Optional[User]:
+        result = await self.db.execute(select(User).where(User.id == id))
         return result.scalars().first()
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        email = email.lower()
-        result = await self.db.execute(select(User).where(User.email == email))
+    async def get_user_by_user_id(self, user_id: str) -> Optional[User]:
+        result = await self.db.execute(select(User).where(User.user_id == user_id))
         return result.scalars().first()
 
     async def get_user_by_employee_id(self, employee_id: str) -> Optional[User]:
@@ -50,12 +53,53 @@ class UserRepository:
         )
         return result.scalars().first()
 
+    # ============================
+    # LIST
+    # ============================
     async def list_users(self, skip: int = 0, limit: int = 50) -> List[User]:
         result = await self.db.execute(select(User).offset(skip).limit(limit))
         return result.scalars().all()
 
-    async def update_user(self, user_id: UUID, data: dict) -> User:
-        user = await self.get_user_by_id(user_id)
+    async def list_by_department(self, department_id: UUID) -> List[User]:
+        result = await self.db.execute(
+            select(User).where(User.department_id == department_id)
+        )
+        return result.scalars().all()
+
+    async def list_by_branch(self, branch_id: UUID) -> List[User]:
+        result = await self.db.execute(select(User).where(User.branch_id == branch_id))
+        return result.scalars().all()
+
+    async def list_by_role(self, role_id: UUID) -> List[User]:
+        result = await self.db.execute(select(User).where(User.role_id == role_id))
+        return result.scalars().all()
+
+    async def list_by_status(self, status: UserStatus) -> List[User]:
+        result = await self.db.execute(select(User).where(User.status == status))
+        return result.scalars().all()
+
+    async def list_managers(self) -> List[User]:
+        result = await self.db.execute(
+            select(User)
+            .where(User.user_level == UserLevel.MANAGER)
+            .order_by(User.created_at.asc())
+        )
+        return result.scalars().all()
+
+    async def list_available_managers(self) -> List[User]:
+        result = await self.db.execute(
+            select(User)
+            .where(User.user_level == UserLevel.MANAGER)
+            .where(User.managed_department.is_(None))
+            .order_by(User.created_at.asc())
+        )
+        return result.scalars().all()
+
+    # ============================
+    # UPDATE
+    # ============================
+    async def update_user(self, id: UUID, data: dict) -> User:
+        user = await self.get_user_by_id(id)
         if not user:
             raise AppException(ErrorCode.USER_NOT_FOUND)
 
@@ -71,13 +115,7 @@ class UserRepository:
             except ValueError:
                 raise AppException(ErrorCode.INVALID_USER_LEVEL)
 
-        if "email" in data and data["email"]:
-            data["email"] = data["email"].lower()
-
         allowed_fields = {
-            "fullname",
-            "email",
-            "password",
             "role_id",
             "department_id",
             "branch_id",
@@ -100,16 +138,16 @@ class UserRepository:
             await self.db.rollback()
             msg = str(e.orig).lower()
 
-            if "email" in msg:
-                raise AppException(ErrorCode.EMAIL_ALREADY_EXISTS)
-
             if "employee_id" in msg:
                 raise AppException(ErrorCode.EMPLOYEE_ID_ALREADY_EXISTS)
 
             raise AppException(ErrorCode.DATABASE_ERROR)
 
-    async def delete_user(self, user_id: UUID) -> bool:
-        user = await self.get_user_by_id(user_id)
+    # ============================
+    # DELETE
+    # ============================
+    async def delete_user(self, id: UUID) -> bool:
+        user = await self.get_user_by_id(id)
         if not user:
             raise AppException(ErrorCode.USER_NOT_FOUND)
 
@@ -121,21 +159,3 @@ class UserRepository:
         except IntegrityError:
             await self.db.rollback()
             raise AppException(ErrorCode.USER_CANNOT_BE_DELETED)
-
-    async def list_by_department(self, department_id: UUID) -> List[User]:
-        result = await self.db.execute(
-            select(User).where(User.department_id == department_id)
-        )
-        return result.scalars().all()
-
-    async def list_by_branch(self, branch_id: UUID) -> List[User]:
-        result = await self.db.execute(select(User).where(User.branch_id == branch_id))
-        return result.scalars().all()
-
-    async def list_by_role(self, role_id: UUID) -> List[User]:
-        result = await self.db.execute(select(User).where(User.role_id == role_id))
-        return result.scalars().all()
-
-    async def list_by_status(self, status: UserStatus) -> List[User]:
-        result = await self.db.execute(select(User).where(User.status == status))
-        return result.scalars().all()

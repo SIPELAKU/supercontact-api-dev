@@ -23,12 +23,10 @@ class ContactResponse(ContactBase):
 
 
 class PaginatedContacts(SQLModel):
-    status: str
-    message: str
     total: int
     page: int
     limit: int
-    data: List[ContactResponse]
+    contacts: List[ContactResponse]
 
     class Config:
         from_attributes = True

@@ -1,22 +1,28 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.user_model import User
 from app.models.role_model import Role
 from app.models.department_model import Department
 from app.models.branch_model import Branch
-from app.schemas.user_schema import UserCreateRequest, UserUpdateRequest
-from app.core.security import hash_password
+from app.schemas.user_schema import (
+    UserCreateRequest,
+    UserUpdateRequest,
+)
 from app.exceptions import AppException
 from app.schemas.error_schema import ErrorCode
+from app.repository.user_repository import UserRepository
+from app.repository.auth_repository import AuthRepository
 
 
 class UserService:
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.repo = UserRepository(db)
+        self.auth_repo = AuthRepository(db)
 
     async def _get_role_by_name(self, role_name: str) -> Role:
         result = await self.db.execute(select(Role).where(Role.role_name == role_name))
@@ -60,26 +66,13 @@ class UserService:
         if branch.department_id != department.id:
             raise AppException(
                 ErrorCode.BRANCH_NOT_IN_DEPARTMENT,
-                "Branch does not belong to the selected department",
-            )
-
-    async def _check_unique_email(
-        self, email: str, exclude_user_id: Optional[UUID] = None
-    ):
-        query = select(User).where(User.email == email)
-        if exclude_user_id:
-            query = query.where(User.id != exclude_user_id)
-
-        result = await self.db.execute(query)
-        if result.scalars().first():
-            raise AppException(
-                status_code=400,
-                code=ErrorCode.USER_EMAIL_EXISTS,
-                message="Email already used",
+                "Branch does not belong to selected department",
             )
 
     async def _check_unique_employee_id(
-        self, employee_id: Optional[str], exclude_user_id: Optional[UUID] = None
+        self,
+        employee_id: Optional[str],
+        exclude_user_id: Optional[UUID] = None,
     ):
         if not employee_id:
             return
@@ -91,12 +84,27 @@ class UserService:
         result = await self.db.execute(query)
         if result.scalars().first():
             raise AppException(
-                ErrorCode.USER_EMPLOYEE_ID_EXISTS, "Employee ID already used"
+                ErrorCode.USER_EMPLOYEE_ID_EXISTS,
+                "Employee ID already used",
             )
 
     async def create_user(self, data: UserCreateRequest) -> User:
-        await self._check_unique_email(data.email)
-        await self._check_unique_employee_id(data.employee_id)
+        """ """
+        auth_user = await self.auth_repo.get_by_email(data.email)
+        if not auth_user:
+            raise AppException(
+                ErrorCode.USER_NOT_REGISTERED,
+                "Email belum terdaftar",
+            )
+
+        user_id = auth_user.user_id
+
+        exists = await self.repo.get_by_user_id(user_id)
+        if exists:
+            raise AppException(
+                ErrorCode.USER_ALREADY_EXISTS,
+                "User sudah ditambahkan",
+            )
 
         role = await self._get_role_by_name(data.role)
         department = await self._get_department_by_name(data.department)
@@ -104,10 +112,8 @@ class UserService:
 
         await self._validate_branch_belongs_to_department(branch, department)
 
-        new_user = User(
-            fullname=data.fullname,
-            email=data.email,
-            password=hash_password(data.password),
+        user = User(
+            user_id=user_id,
             role_id=role.id,
             department_id=department.id if department else None,
             branch_id=branch.id if branch else None,
@@ -116,11 +122,12 @@ class UserService:
             status=data.status,
         )
 
-        self.db.add(new_user)
+        self.db.add(user)
         await self.db.commit()
-        await self.db.refresh(new_user)
-        return new_user
+        await self.db.refresh(user)
+        return user
 
+    # GET USER
     async def get_user(self, user_id: UUID) -> User:
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalars().first()
@@ -128,59 +135,46 @@ class UserService:
             raise AppException(ErrorCode.USER_NOT_FOUND, "User not found")
         return user
 
+    # LIST USERS
+
     async def list_users(self, skip: int = 0, limit: int = 20) -> List[User]:
         result = await self.db.execute(
             select(User).order_by(User.created_at.desc()).offset(skip).limit(limit)
         )
         return list(result.scalars().all())
 
+    # UPDATE USER
+
     async def update_user(self, user_id: UUID, data: UserUpdateRequest) -> User:
         user = await self.get_user(user_id)
 
-        if data.email and data.email != user.email:
-            await self._check_unique_email(data.email, user.id)
-
-        if data.employee_id and data.employee_id != user.employee_id:
-            await self._check_unique_employee_id(data.employee_id, user.id)
-
-        role = await self._get_role_by_name(data.role) if data.role else None
-
-        department = (
-            await self._get_department_by_name(data.department)
-            if data.department
-            else None
-        )
-
-        branch = await self._get_branch_by_name(data.branch) if data.branch else None
-
-        await self._validate_branch_belongs_to_department(
-            branch or None,
-            department or None,
-        )
-
-        if data.fullname is not None:
-            user.fullname = data.fullname
-        if data.email is not None:
-            user.email = data.email
-        if role:
+        if data.role:
+            role = await self._get_role_by_name(data.role)
             user.role_id = role.id
-        if department is not None:
-            user.department_id = department.id
-        if branch is not None:
-            user.branch_id = branch.id
+
+        if data.department is not None:
+            department = await self._get_department_by_name(data.department)
+            user.department_id = department.id if department else None
+
+        if data.branch is not None:
+            branch = await self._get_branch_by_name(data.branch)
+            user.branch_id = branch.id if branch else None
+
         if data.user_level is not None:
             user.user_level = data.user_level
+
         if data.employee_id is not None:
+            await self._check_unique_employee_id(data.employee_id, user.id)
             user.employee_id = data.employee_id
+
         if data.status is not None:
             user.status = data.status
-        if data.password:
-            user.password = hash_password(data.password)
 
         await self.db.commit()
         await self.db.refresh(user)
         return user
 
+    # DELETE USER
     async def delete_user(self, user_id: UUID):
         user = await self.get_user(user_id)
         await self.db.delete(user)

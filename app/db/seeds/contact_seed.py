@@ -29,6 +29,7 @@ async def seed_contacts(total: int = 5, user_id: UUID = None):
     try:
         await db.commit()
     except IntegrityError:
+        print("Rollback")
         await db.rollback()
     finally:
         await db.close()

@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserStatus(StrEnum):
@@ -17,38 +17,41 @@ class UserLevel(StrEnum):
     MANAGER = "Manager"
 
 
+# REQUEST SCHEMAS
+
+
 class UserCreateRequest(BaseModel):
-    fullname: str
     email: EmailStr
 
-    role: str
-    department: Optional[str] = None
-    branch: Optional[str] = None
+    role_id: UUID
+    department_id: Optional[UUID] = None
+    branch_id: Optional[UUID] = None
 
     user_level: UserLevel = UserLevel.STAFF
     employee_id: Optional[str] = None
     status: UserStatus = UserStatus.PENDING
 
-    password: str = Field(..., min_length=6)
+
+# Update Manage User
 
 
 class UserUpdateRequest(BaseModel):
-    fullname: Optional[str] = None
-    email: Optional[EmailStr] = None
-
-    role: Optional[str] = None
-    department: Optional[str] = None
-    branch: Optional[str] = None
+    role_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None
+    branch_id: Optional[UUID] = None
 
     user_level: Optional[UserLevel] = None
     employee_id: Optional[str] = None
     status: Optional[UserStatus] = None
 
-    password: Optional[str] = Field(default=None, min_length=6)
+
+# RESPONSE SCHEMAS
 
 
 class UserResponse(BaseModel):
     id: UUID
+    user_id: str
+
     fullname: str
     email: EmailStr
 
@@ -69,3 +72,13 @@ class UserResponse(BaseModel):
 class UserListResponse(BaseModel):
     total: int
     items: List[UserResponse]
+
+
+# DROPDOWN / HELPER SCHEMAS
+
+
+class ManagerDropdown(BaseModel):
+    id: UUID
+    fullname: str
+
+    model_config = ConfigDict(from_attributes=True)

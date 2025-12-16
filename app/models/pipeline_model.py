@@ -43,7 +43,8 @@ class Pipeline(SQLModel, table=True):
     amount: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
     probability_of_close: int = Field(ge=1, le=100, sa_column=Column(Integer, nullable=False))
     notes: Optional[str] = Field(sa_column=Column(Text, nullable=True))
-    is_closed: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
+    assigned_to: UUID = Field(foreign_key='users.id', nullable=False)
+    is_deleted: bool = Field(sa_column=Column(Boolean, nullable=False), default=False)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -57,7 +58,8 @@ class Pipeline(SQLModel, table=True):
             onupdate=lambda: datetime.now(timezone.utc),
         ),
     )
-    contact: Optional["Contact"] = Relationship(back_populates="pipeline")
+    user: "User" = Relationship(back_populates="pipelines")
+    contact: "Contact" = Relationship(back_populates="pipeline")
 
     __table_args__ = (
         CheckConstraint("probability_of_close >= 0 AND probability_of_close <= 100"),
