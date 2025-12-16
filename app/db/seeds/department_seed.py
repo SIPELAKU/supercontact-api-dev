@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.models.role_model import Role
+from app.models.department_model import Department
 
 
 DATABASE_URL = (
@@ -16,33 +16,35 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-ROLES = [
-    ("SuperAdmin", True),
-    ("Admin", True),
-    ("Manager", False),
-    ("Staff", False),
+DEPARTMENTS = [
+    "Marketing",
+    "Sales",
+    "Engineering",
+    "Human Resources",
+    "Customer Support",
 ]
 
 
-async def seed_roles(session: AsyncSession):
-    roles = []
+async def seed_departments(session: AsyncSession):
+    departments = []
 
-    for role_name, is_system in ROLES:
-        result = await session.execute(select(Role).where(Role.role_name == role_name))
-        role = result.scalar_one_or_none()
+    for name in DEPARTMENTS:
+        result = await session.execute(
+            select(Department).where(Department.name == name)
+        )
+        department = result.scalar_one_or_none()
 
-        if not role:
-            role = Role(
+        if not department:
+            department = Department(
                 id=uuid4(),
-                role_name=role_name,
-                is_system_role=is_system,
+                name=name,
             )
-            session.add(role)
+            session.add(department)
 
-        roles.append(role)
+        departments.append(department)
 
     await session.commit()
-    return roles
+    return departments
 
 
 async def main():
@@ -50,9 +52,9 @@ async def main():
         await conn.run_sync(SQLModel.metadata.create_all)
 
     async with async_session() as session:
-        await seed_roles(session)
+        await seed_departments(session)
 
-    print("✅ Seed roles selesai")
+    print("✅ Department seeding selesai!")
 
 
 if __name__ == "__main__":

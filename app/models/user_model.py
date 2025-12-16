@@ -118,7 +118,7 @@ class User(SQLModel, table=True):
                 UserStatus,
                 name="status_enum",
                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-                native_enum=False
+                native_enum=False,
             ),
             nullable=False,
         ),
@@ -130,7 +130,7 @@ class User(SQLModel, table=True):
             DateTime(timezone=True),
             nullable=False,
             server_default=func.now(),
-        )
+        ),
     )
 
     updated_at: datetime = Field(
@@ -140,14 +140,13 @@ class User(SQLModel, table=True):
             nullable=False,
             server_default=func.now(),
             onupdate=func.now(),
-        )
+        ),
     )
     leads: List["Lead"] = Relationship(back_populates="user")
     pipelines: List["Pipeline"] = Relationship(back_populates="user")
     contacts: List["Contact"] = Relationship(back_populates="user")
     contact_tasks: List["ContactTask"] = Relationship(
-        back_populates="users",
-        link_model=UserTaskLink
+        back_populates="users", link_model=UserTaskLink
     )
     detail: List["UserDetail"] = Relationship(back_populates="user")
 

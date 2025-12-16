@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+from typing import List
 
 from app.db import get_async_session
 from app.schemas.user_schema import (
@@ -8,6 +9,7 @@ from app.schemas.user_schema import (
     UserUpdateRequest,
     UserResponse,
     UserListResponse,
+    ManagerDropdown,
 )
 from app.services.user_service import UserService
 from app.utils.permissions import require_permissions
@@ -15,10 +17,13 @@ from app.utils.permissions import require_permissions
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-def get_user_service(db: AsyncSession = Depends(get_async_session)) -> UserService:
+def get_user_service(
+    db: AsyncSession = Depends(get_async_session),
+) -> UserService:
     return UserService(db)
 
 
+# CREATE USER
 @router.post(
     "",
     response_model=UserResponse,
@@ -28,8 +33,8 @@ async def create_user(
     data: UserCreateRequest,
     service: UserService = Depends(get_user_service),
 ):
-    new_user = await service.create_user(data)
-    return new_user
+    """ """
+    return await service.create_user(data)
 
 
 @router.get(
@@ -42,45 +47,60 @@ async def list_users(
     limit: int = Query(20, ge=1, le=200),
     service: UserService = Depends(get_user_service),
 ):
-
     users = await service.list_users(skip=skip, limit=limit)
-    return UserListResponse(total=len(users), items=users)
+    return UserListResponse(
+        total=len(users),
+        items=users,
+    )
 
 
 @router.get(
-    "/{user_id}",
+    "/dropdown/managers",
+    response_model=List[ManagerDropdown],
+    dependencies=[Depends(require_permissions("user:read"))],
+)
+async def manager_dropdown(
+    service: UserService = Depends(get_user_service),
+):
+    """ """
+    return await service.get_manager_dropdown()
+
+
+# GET USER DETAIL
+@router.get(
+    "/{id}",
     response_model=UserResponse,
     dependencies=[Depends(require_permissions("user:read"))],
 )
 async def get_user(
-    user_id: UUID,
+    id: UUID,
     service: UserService = Depends(get_user_service),
 ):
-    user = await service.get_user(user_id)
-    return user
+    return await service.get_user(id)
 
 
+# UPDATE USER
 @router.put(
-    "/{user_id}",
+    "/{id}",
     response_model=UserResponse,
     dependencies=[Depends(require_permissions("user:update"))],
 )
 async def update_user(
-    user_id: UUID,
+    id: UUID,
     data: UserUpdateRequest,
     service: UserService = Depends(get_user_service),
 ):
-    updated = await service.update_user(user_id, data)
-    return updated
+    return await service.update_user(id, data)
 
 
+# DELETE USER
 @router.delete(
-    "/{user_id}",
+    "/{id}",
     dependencies=[Depends(require_permissions("user:delete"))],
 )
 async def delete_user(
-    user_id: UUID,
+    id: UUID,
     service: UserService = Depends(get_user_service),
 ):
-    await service.delete_user(user_id)
+    await service.delete_user(id)
     return {"message": "User deleted successfully"}

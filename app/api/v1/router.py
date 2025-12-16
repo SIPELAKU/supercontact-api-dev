@@ -9,9 +9,11 @@ from app.api.v1 import (
     products_router,
     quotations_router,
     userprofile_router,
+    manage_users_router,
 )
 
 api_router = APIRouter()
+
 api_router.include_router(auth_router)
 api_router.include_router(leads_router)
 api_router.include_router(users_router)
@@ -20,3 +22,4 @@ api_router.include_router(contacts_router)
 api_router.include_router(products_router)
 api_router.include_router(quotations_router)
 api_router.include_router(userprofile_router)
+api_router.include_router(manage_users_router)

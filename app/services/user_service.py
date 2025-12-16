@@ -20,19 +20,25 @@ class UserService:
         user = await self.repo.get_by_email(email)
 
         if not user or not verify_password(password, user.password):
-            raise AppException(code=ErrorCode.AUTH_REQUIRED, status_code=401, message="Invalid email or password")
+            raise AppException(
+                code=ErrorCode.AUTH_REQUIRED,
+                status_code=401,
+                message="Invalid email or password",
+            )
 
         return user
 
     async def find_by_id(self, user_id: UUID):
         user = await self.repo.get_by_id(user_id)
         if not user:
-            raise AppException(code=ErrorCode.NOT_FOUND, status_code=404, message="User not found")
+            raise AppException(
+                code=ErrorCode.NOT_FOUND, status_code=404, message="User not found"
+            )
         return user
 
     async def find_all_users(
-            self,
-            query_params: UserGetQuery,
+        self,
+        query_params: UserGetQuery,
     ):
 
         users, total = await self.repo.list_users(query_params=query_params)
@@ -48,7 +54,11 @@ class UserService:
     async def create(self, req: UserCreateRequest):
         existing = await self.repo.get_by_email(req.email)
         if existing:
-            raise AppException(status_code=400, code=ErrorCode.VALIDATION_ERROR, message="Email already registered")
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Email already registered",
+            )
 
         avatar = req.fullname[:2].upper() if req.fullname else None
 
@@ -66,11 +76,17 @@ class UserService:
     async def update(self, user_id: UUID, req: UserUpdateRequest):
         user = await self.repo.get_by_id(user_id)
         if not user:
-            raise AppException(status_code=404, code=ErrorCode.NOT_FOUND, message="User not found")
+            raise AppException(
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            )
 
         if req.email and req.email != user.email:
             if await self.repo.get_by_email(req.email):
-                raise AppException(status_code=400, code=ErrorCode.VALIDATION_ERROR, message="Email already taken")
+                raise AppException(
+                    status_code=400,
+                    code=ErrorCode.VALIDATION_ERROR,
+                    message="Email already taken",
+                )
             user.email = req.email
 
         if req.fullname:
@@ -91,7 +107,9 @@ class UserService:
     async def delete(self, user_id: UUID):
         user = await self.repo.get_by_id(user_id)
         if not user:
-            raise AppException(status_code=404, code=ErrorCode.NOT_FOUND, message="User not found")
+            raise AppException(
+                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            )
 
         await self.repo.delete(user)
         return {"message": "User deleted successfully"}
