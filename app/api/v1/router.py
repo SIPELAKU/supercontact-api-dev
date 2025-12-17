@@ -10,6 +10,7 @@ from app.api.v1 import (
     quotations_router,
     userprofile_router,
     mailings_router,
+    notes_router,
 )
 
 api_router = APIRouter()
@@ -22,3 +23,4 @@ api_router.include_router(products_router)
 api_router.include_router(quotations_router)
 api_router.include_router(userprofile_router)
 api_router.include_router(mailings_router)
+api_router.include_router(notes_router)
