@@ -16,8 +16,8 @@ class ContactService:
     def __init__(self, db: AsyncSession):
         self.repo = ContactRepository(db)
 
-    async def create_contact(self, user_id: UUID, data: ContactCreate):
-        contact = await self.repo.create(Contact(user_id=user_id, **data.model_dump()))
+    async def create_contact(self, data: ContactCreate):
+        contact = await self.repo.create(Contact(**data.model_dump()))
         return contact
 
     async def find_all_contacts(self, query):
@@ -35,8 +35,8 @@ class ContactService:
             "contacts": contacts
         }
 
-    async def find_one_contact(self, user_id: UUID, contact_id: UUID):
-        contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
+    async def find_one_contact(self, contact_id: UUID):
+        contact = await self.repo.get_by_id(contact_id=contact_id)
         if not contact:
             raise AppException(
                 status_code=404,
@@ -45,8 +45,8 @@ class ContactService:
             )
         return contact
 
-    async def update_contact(self, user_id: UUID, contact_id: UUID, data: ContactUpdate):
-        contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
+    async def update_contact(self, contact_id: UUID, data: ContactUpdate):
+        contact = await self.repo.get_by_id(contact_id=contact_id)
         if not contact:
             raise AppException(
                 status_code=404,
@@ -55,8 +55,8 @@ class ContactService:
             )
         return await self.repo.update(contact, data)
 
-    async def delete_contact(self, user_id: UUID, contact_id: UUID):
-        contact = await self.repo.get_by_id(user_id=user_id, contact_id=contact_id)
+    async def delete_contact(self, contact_id: UUID):
+        contact = await self.repo.get_by_id(contact_id=contact_id)
         if not contact:
             raise AppException(
                 status_code=404,

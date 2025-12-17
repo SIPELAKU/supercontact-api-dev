@@ -16,12 +16,11 @@ class ContactRepository:
         await self.db.refresh(contact)
         return contact
 
-    async def get_by_id(self, user_id: UUID, contact_id: UUID):
+    async def get_by_id(self, contact_id: UUID):
         query = (
             select(Contact)
             .where(
                 Contact.id == contact_id,
-                Contact.user_id == user_id
             )
         )
         return await self.db.scalar(query)

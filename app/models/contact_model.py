@@ -10,7 +10,7 @@ class Contact(SQLModel, table=True):
     __tablename__ = "contacts"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id")
+    # user_id: UUID = Field(foreign_key="users.id")
 
     name: str = Field(sa_column=Column(String(255), nullable=False))
     email: str = Field(sa_column=Column(String(255), nullable=False, unique=True))
@@ -19,7 +19,7 @@ class Contact(SQLModel, table=True):
     job_title: Optional[str] = Field(sa_column=Column(String(30), nullable=True))
     address: Optional[str] = Field(sa_column=Column(Text(), nullable=True))
 
-    user: Optional["User"] = Relationship(back_populates="contacts")
+    # user: Optional["User"] = Relationship(back_populates="contacts")
     lead: Optional["Lead"] = Relationship(back_populates="contact")
     pipeline: Optional["Pipeline"] = Relationship(back_populates="contact")
 
