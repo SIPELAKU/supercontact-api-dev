@@ -38,7 +38,7 @@ class Lead(SQLModel):
 
 class QuotationGetQuery(SQLModel):
     page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=0, le=100)
+    limit: int = Query(10, ge=1, le=100)
     date_from: Optional[date] = Query(None)
     date_to: Optional[date] = Query(None)
     search: Optional[str] = Query(None)
@@ -48,7 +48,7 @@ class QuotationItemRequest(SQLModel):
     product_id: UUID
     quantity: int = Field(gt=0)
     notes: Optional[str]
-    discount: int = Field(ge=0, le=100)
+    discount: int = Field(ge=0, le=25)
 
 
 class QuotationRequest(SQLModel):
@@ -90,6 +90,7 @@ class QuotationListResponse(SQLModel):
     quotations: List[QuotationResponse]
 
 
-class QuotationDeleteResponse(SQLModel):
-    id: UUID
-    deleted: bool
+class QuotationSendEmailResponse(SQLModel):
+    to_email: EmailStr
+    subject: str
+    delivered: bool

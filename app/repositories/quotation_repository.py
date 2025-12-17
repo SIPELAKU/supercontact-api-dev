@@ -3,27 +3,18 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, or_, text
+from sqlmodel import select, func, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
 from app.models import Quotation, Lead, QuotationItem, Contact, Product, QuotationStatus
-from app.schemas import QuotationRequest, ErrorCode
-from app.schemas.quotation_schema import QuotationGetQuery
+from app.schemas import QuotationGetQuery, QuotationRequest, ErrorCode
+from app.utils import get_next_sequence, PrefixSequence
 
 
 class QuotationRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
-
-    async def generate_quotation_number(self) -> str:
-        year = datetime.now(timezone.utc).strftime("%y")
-        seq_name = f"quotation_{year}_seq"
-
-        result = await self.db.exec(text(f"SELECT nextval('{seq_name}')"))
-        seq = result.scalar_one()
-
-        return f"QUO-{year}-{seq:03d}"
 
     async def get_by_id(self, quotation_id: UUID):
         query = (
@@ -48,7 +39,8 @@ class QuotationRepository:
 
     async def create(self, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
-        quotation_number = await self.generate_quotation_number()
+        year, quo_seq = await get_next_sequence(prefix=PrefixSequence.QUOTATION, db=self.db)
+        quotation_number = f"QUO-{year}-{quo_seq:03d}"
         quotation = Quotation(
             lead_id=payload.lead_id,
             quotation_number=quotation_number,
@@ -126,12 +118,13 @@ class QuotationRepository:
 
         return quotations, total
 
-    async def update(self, quotation: Quotation, payload: QuotationRequest):
+    async def update(self, quotation: Quotation, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
         # UPDATE FIELD PARENT
         quotation.lead_id = payload.lead_id
         quotation.quotation_title = payload.quotation_title
         quotation.expire_date = payload.expire_date
+        quotation.quotation_status = status
 
         old_items = await self.db.scalars(
             select(QuotationItem)

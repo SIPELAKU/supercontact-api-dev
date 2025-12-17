@@ -1,8 +1,8 @@
 """initial migrations
 
-Revision ID: 1de340673c02
+Revision ID: 184923007e13
 Revises: 
-Create Date: 2025-12-15 11:21:52.309875
+Create Date: 2025-12-16 22:52:15.387365
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1de340673c02'
+revision: str = '184923007e13'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -154,9 +154,11 @@ def upgrade() -> None:
     op.create_table('quotations',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('lead_id', sa.Uuid(), nullable=False),
+    sa.Column('quotation_number', sa.String(length=10), nullable=False),
     sa.Column('quotation_title', sa.String(length=255), nullable=False),
     sa.Column('expire_date', sa.DateTime(timezone=True), nullable=False),
     sa.Column('grand_total', sa.Numeric(precision=18, scale=2), nullable=False),
+    sa.Column('quotation_status', sa.Enum('Pending', 'Accepted', name='quotation_status_enum', native_enum=False), server_default='Pending', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], ),
@@ -175,8 +177,8 @@ def upgrade() -> None:
     sa.Column('product_id', sa.Uuid(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
     sa.Column('unit_price', sa.Numeric(precision=18, scale=2), nullable=False),
-    sa.Column('subtotal', sa.Numeric(precision=18, scale=2), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('discount', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.ForeignKeyConstraint(['quotation_id'], ['quotations.id'], ),
     sa.PrimaryKeyConstraint('id')

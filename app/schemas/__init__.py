@@ -46,6 +46,8 @@ from .quotation_schema import (
     QuotationItemResponse,
     QuotationResponse,
     QuotationListResponse,
+    QuotationGetQuery,
+    QuotationSendEmailResponse,
 )
 from .response_schema import ResponseModel
 from .user_schema import (

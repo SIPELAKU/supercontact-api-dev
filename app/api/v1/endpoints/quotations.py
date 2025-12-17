@@ -1,12 +1,14 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_db_session
+from app.exceptions import AppException
 from app.models import QuotationStatus
-from app.schemas import ResponseModel, QuotationResponse, QuotationListResponse, QuotationRequest
-from app.schemas.quotation_schema import QuotationGetQuery, QuotationDeleteResponse
+from app.schemas import ResponseModel, QuotationResponse, QuotationListResponse, QuotationRequest, ErrorCode, \
+    QuotationSendEmailResponse
+from app.schemas.quotation_schema import QuotationGetQuery
 from app.services import QuotationService
 
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
@@ -31,7 +33,7 @@ async def get_all_quotations(
 
 # CREATE NEW QUOTATION (SAVE AS DRAFT)
 @router.post(
-    "",
+    "/draft",
     response_model=ResponseModel[QuotationResponse],
     #     dependencies=[Depends(auth_require)],
 )
@@ -43,9 +45,9 @@ async def create_new_quotation_as_draft(
     return ResponseModel(data=data)
 
 
-# CREATE NEW QUOTATION
+# CREATE NEW QUOTATION (PUBLISH)
 @router.post(
-    "",
+    "/publish",
     response_model=ResponseModel[QuotationResponse],
     #     dependencies=[Depends(auth_require)],
 )
@@ -53,7 +55,7 @@ async def create_new_quotation_as_publish(
         payload: QuotationRequest,
         service: QuotationService = Depends(get_quotation_service)
 ):
-    data = await service.create_quotation(payload=payload, status=QuotationStatus.PENDING)
+    data = await service.create_quotation(payload=payload, status=QuotationStatus.ACCEPTED)
     return ResponseModel(data=data)
 
 
@@ -71,30 +73,69 @@ async def get_quotation_by_id(
     return ResponseModel(data=data)
 
 
-# UPDATE QUOTATION BY ID
+# UPDATE QUOTATION BY ID (SAVE AS DRAFT)
 @router.put(
-    "/{quotation_id}",
+    "/{quotation_id}/draft",
     response_model=ResponseModel[QuotationResponse],
     #     dependencies=[Depends(auth_require)],
 )
-async def update_quotation_by_id(
+async def update_quotation_by_id_as_draft(
         quotation_id: UUID,
         payload: QuotationRequest,
         service: QuotationService = Depends(get_quotation_service)
 ):
-    data = await service.update_quotation(quotation_id=quotation_id, payload=payload)
+    data = await service.update_quotation(quotation_id=quotation_id, payload=payload, status=QuotationStatus.PENDING)
     return ResponseModel(data=data)
 
 
-# DELETE QUOTATION BY ID
-@router.delete(
-    "/{quotation_id}",
-    response_model=ResponseModel[QuotationDeleteResponse],
+# UPDATE QUOTATION BY ID (PUBLISH)
+@router.put(
+    "/{quotation_id}/publish",
+    response_model=ResponseModel[QuotationResponse],
     #     dependencies=[Depends(auth_require)],
 )
-async def delete_quotation_by_id(
+async def update_quotation_by_id_as_publish(
         quotation_id: UUID,
+        payload: QuotationRequest,
         service: QuotationService = Depends(get_quotation_service)
 ):
-    data = await service.delete_quotation(quotation_id=quotation_id)
-    return ResponseModel(data=QuotationDeleteResponse(id=quotation_id, deleted=data))
+    data = await service.update_quotation(quotation_id=quotation_id, payload=payload, status=QuotationStatus.ACCEPTED)
+    return ResponseModel(data=data)
+
+
+# UPDATE QUOTATION BY ID (PUBLISH)
+@router.post(
+    "/send-email",
+    response_model=ResponseModel[QuotationSendEmailResponse],
+    #     dependencies=[Depends(auth_require)],
+)
+async def send_to_quotation_by_email(
+        to_email: str = Form(...),
+        subject: str = Form(...),
+        file: UploadFile = File(...),
+        service: QuotationService = Depends(get_quotation_service)
+):
+    if file.content_type != "application/pdf":
+        raise AppException(
+            code=ErrorCode.VALIDATION_ERROR,
+            status_code=400,
+            message="Only PDF files are allowed",
+        )
+
+    pdf_bytes = await file.read()
+
+    if len(pdf_bytes) > 5 * 1024 * 1024:
+        raise AppException(
+            code=ErrorCode.VALIDATION_ERROR,
+            status_code=400,
+            message="File size must be under 5MB",
+        )
+
+    data = await service.send_pdf_email(
+        to_email=to_email,
+        pdf_bytes=pdf_bytes,
+        filename=file.filename,
+        subject=subject,
+    )
+
+    return ResponseModel(data=data)
