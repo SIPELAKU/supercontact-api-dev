@@ -36,6 +36,7 @@ PERMISSIONS = [
     "department:update",
     "department:delete",
     "department:*",
+    "permission:*",
 ]
 
 OLD_TO_NEW = {

@@ -19,6 +19,7 @@ ROLE_PERMISSION_MAP = {
         "user:*",
         "role:*",
         "department:*",
+        "permission:*",
     ],
     "Admin": [
         "user:*",

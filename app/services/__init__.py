@@ -7,3 +7,4 @@ from .pipeline_service import PipelineService
 from .product_service import ProductService
 from .quotation_service import QuotationService
 from .user_service import UserService
+from .permission_service import PermissionService
