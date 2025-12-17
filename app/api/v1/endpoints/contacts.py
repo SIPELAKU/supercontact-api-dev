@@ -60,6 +60,7 @@ async def create_contact(
         current_user=Depends(auth_require)
 ):
     contact = await service.create_contact(user_id=current_user.id, data=data)
+    contact = await service.create_contact(data=data)
 
     return ResponseModel(
         data=contact

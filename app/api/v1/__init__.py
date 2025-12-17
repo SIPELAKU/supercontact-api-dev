@@ -7,6 +7,7 @@ from .endpoints import (
     products_router,
     quotations_router,
     userprofile_router,
+    mailings_router,
 )
 
 from .router import api_router

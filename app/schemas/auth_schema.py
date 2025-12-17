@@ -53,7 +53,17 @@ class ForgotPasswordRequest(SQLModel):
     email: EmailStr
 
 
+class ForgotPasswordResponse(SQLModel):
+    reset_token: str
+
+    class Config:
+        from_attributes = True
+
+
 class ResetPasswordRequest(SQLModel):
     email: EmailStr
     new_password: str
     token: str
+
+class ResetPasswordResponse(SQLModel):
+    message: str
