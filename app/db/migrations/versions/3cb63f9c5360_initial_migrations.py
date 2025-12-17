@@ -1,8 +1,8 @@
-"""add mailings
+"""initial migrations
 
-Revision ID: cd51b8d6e63d
+Revision ID: 3cb63f9c5360
 Revises: 
-Create Date: 2025-12-16 22:06:31.964292
+Create Date: 2025-12-17 15:10:42.974207
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'cd51b8d6e63d'
+revision: str = '3cb63f9c5360'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -86,7 +86,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('subject', sa.String(length=255), nullable=False),
     sa.Column('status', sa.String(length=255), nullable=False),
-    sa.Column('sent_date', sa.String(length=255), nullable=False),
+    sa.Column('send_date', sa.Date(), nullable=False),
     sa.Column('statistic', sa.String(length=255), nullable=False),
     sa.Column('created_by', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),

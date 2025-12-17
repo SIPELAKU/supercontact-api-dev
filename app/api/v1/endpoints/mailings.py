@@ -15,11 +15,12 @@ from app.services.mailing_service import MailingService
 
 router = APIRouter(prefix="/mailings", tags=["Mailings"])
 
+
 async def get_mailing_service(db: AsyncSession = Depends(get_async_session)):
     return MailingService(db=db)
 
 
-@router.get("/", response_model=PaginatedMailings, dependencies=[Depends(auth_require)])
+@router.get("/", response_model=ResponseModel[PaginatedMailings], dependencies=[Depends(auth_require)])
 async def get_all_mailings(
         page: int = 1,
         limit: int = 10,
@@ -35,23 +36,21 @@ async def get_all_mailings(
     result = await service.find_all_mailings(user_id=current_user.id, query=query)
     mailings = [MailingResponse.model_validate(c) for c in result["data"]]
 
-    return PaginatedMailings(
-        status="success",
-        message="Mailing List",
+    return ResponseModel(data=PaginatedMailings(
         total=result["total"],
         page=result["page"],
         limit=result["limit"],
         total_pages=result["total_pages"],
-        data=mailings
-    )
+        mailings=mailings
+    ))
 
 
 @router.post("/", response_model=ResponseModel[MailingResponse],
              dependencies=[Depends(auth_require)])
 async def create_mailing(
-    data: MailingCreate,
-    service: MailingService = Depends(get_mailing_service),
-    current_user=Depends(auth_require)
+        data: MailingCreate,
+        service: MailingService = Depends(get_mailing_service),
+        current_user=Depends(auth_require)
 ):
     mailing = await service.create_mailing(user_id=current_user.id, data=data)
 

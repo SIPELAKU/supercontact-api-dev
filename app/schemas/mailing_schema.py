@@ -1,8 +1,8 @@
-from sqlmodel import SQLModel
 from datetime import date
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+
+from sqlmodel import SQLModel
 
 
 class MailingBase(SQLModel):
@@ -20,12 +20,11 @@ class MailingResponse(MailingBase):
 
 
 class PaginatedMailings(SQLModel):
-    status: str
-    message: str
     total: int
     page: int
     limit: int
-    data: List[MailingResponse]
+    total_pages: int
+    mailings: List[MailingResponse]
 
     class Config:
         from_attributes = True
