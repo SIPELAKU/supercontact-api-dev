@@ -1,12 +1,17 @@
+import base64
 from math import ceil
 from uuid import UUID
 
+import httpx
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core import settings
 from app.exceptions import AppException
+from app.models import QuotationStatus
 from app.repositories import QuotationRepository
 from app.schemas import ErrorCode, QuotationRequest
 from app.schemas.quotation_schema import QuotationGetQuery
+from app.utils import BREVO_URL, get_brevo_headers
 
 
 class QuotationService:
@@ -25,17 +30,13 @@ class QuotationService:
         return quotation
 
     # CREATE NEW QUOTATION
-    async def create_quotation(self, payload: QuotationRequest):
-        return await self.repo.create(payload=payload)
+    async def create_quotation(self, payload: QuotationRequest, status: QuotationStatus):
+        return await self.repo.create(payload=payload, status=status)
 
     # GET ALL QUOTATIONS
     async def find_all_quotations(self, query_params: QuotationGetQuery):
         quotations, total = await self.repo.get_all(query_params=query_params)
-        if not total or not query_params.limit:
-            total_pages = 1
-            query_params.page = 1
-        else:
-            total_pages = ceil(total / query_params.limit)
+        total_pages = ceil(total / query_params.limit)
 
         return {
             "total": total,
@@ -46,25 +47,57 @@ class QuotationService:
         }
 
     # UPDATE QUOTATION
-    async def update_quotation(self, quotation_id: UUID, payload: QuotationRequest):
-        quotation = await  self.repo.get_by_id(quotation_id=quotation_id)
+    async def update_quotation(self, quotation_id: UUID, payload: QuotationRequest, status: QuotationStatus):
+        quotation = await self.repo.get_by_id(quotation_id=quotation_id)
         if not quotation:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
                 message="Quotation not found"
             )
-
-        return await self.repo.update(quotation=quotation, payload=payload)
-
-    # DELETE QUOTATION
-    async def delete_quotation(self, quotation_id: UUID):
-        quotation = await  self.repo.get_by_id(quotation_id=quotation_id)
-        if not quotation:
+        if quotation.status != QuotationStatus.PENDING:
             raise AppException(
-                status_code=404,
-                code=ErrorCode.NOT_FOUND,
-                message="Quotation not found"
+                status_code=400,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Quotation status not pending"
             )
 
-        return await self.repo.delete(quotation=quotation)
+        return await self.repo.update(quotation=quotation, payload=payload, status=status)
+
+    # SEND PDF BY EMAIL
+    async def send_pdf_email(self, to_email: str, subject: str, filename: str, pdf_bytes: bytes):
+        encoded_file = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        payload = {
+            "sender": {
+                "email": settings.BREVO_SENDER_EMAIL,
+                "name": settings.BREVO_SENDER_NAME,
+            },
+            "to": [{"email": to_email}],
+            "subject": subject or "PDF Document",
+            "htmlContent": """
+                    <p>Hello,</p>
+                    <p>Please find the attached PDF document.</p>
+                """,
+            "attachment": [
+                {
+                    "content": encoded_file,
+                    "name": filename,
+                }
+            ],
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                BREVO_URL,
+                headers=get_brevo_headers(),
+                json=payload,
+            )
+
+        if response.status_code >= 400:
+            raise Exception(f"Brevo error: {response.text}")
+
+        return {
+            "to_email": to_email,
+            "subject": subject,
+            "delivered": True,
+        }

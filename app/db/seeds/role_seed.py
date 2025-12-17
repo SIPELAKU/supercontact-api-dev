@@ -18,6 +18,7 @@ async def seed_users():
     try:
         await db.commit()
     except IntegrityError:
+        print("Rollback")
         await db.rollback()
     finally:
         await db.close()

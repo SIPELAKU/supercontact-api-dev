@@ -1,8 +1,8 @@
 """initial migrations
 
-Revision ID: 62a00c3d7616
+Revision ID: 18dda94e028c
 Revises: 
-Create Date: 2025-12-17 17:20:24.410912
+Create Date: 2025-12-17 18:38:23.217247
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '62a00c3d7616'
+revision: str = '18dda94e028c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -96,7 +96,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('contact_id', sa.Uuid(), nullable=False),
     sa.Column('task_name', sa.String(length=255), nullable=False),
-    sa.Column('task_date', sa.Date(), nullable=False),
+    sa.Column('task_date', sa.DateTime(timezone=True), nullable=False),
     sa.Column('priority', sa.String(length=255), nullable=False),
     sa.Column('assign_to', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
@@ -172,9 +172,11 @@ def upgrade() -> None:
     op.create_table('quotations',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('lead_id', sa.Uuid(), nullable=False),
+    sa.Column('quotation_number', sa.String(length=10), nullable=False),
     sa.Column('quotation_title', sa.String(length=255), nullable=False),
     sa.Column('expire_date', sa.DateTime(timezone=True), nullable=False),
     sa.Column('grand_total', sa.Numeric(precision=18, scale=2), nullable=False),
+    sa.Column('quotation_status', sa.Enum('Pending', 'Accepted', name='quotation_status_enum', native_enum=False), server_default='Pending', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], ),
@@ -186,8 +188,8 @@ def upgrade() -> None:
     sa.Column('product_id', sa.Uuid(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
     sa.Column('unit_price', sa.Numeric(precision=18, scale=2), nullable=False),
-    sa.Column('subtotal', sa.Numeric(precision=18, scale=2), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('discount', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.ForeignKeyConstraint(['quotation_id'], ['quotations.id'], ),
     sa.PrimaryKeyConstraint('id')

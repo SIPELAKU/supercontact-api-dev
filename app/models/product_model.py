@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
 from sqlalchemy import Column, DateTime, String, Numeric, Text, Index
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 
 
 class Product(SQLModel, table=True):
@@ -16,6 +17,7 @@ class Product(SQLModel, table=True):
     price: float = Field(le=1, sa_column=Column(Numeric(18, 2), nullable=False))
     sku: str = Field(sa_column=Column(String(20), nullable=False))
     description: str = Field(sa_column=Column(Text, nullable=False))
+    quotation_items: List["QuotationItem"] = Relationship(back_populates="product")
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

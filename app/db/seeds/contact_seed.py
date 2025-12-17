@@ -12,7 +12,7 @@ from app.models import Contact, User
 faker = Faker()
 
 
-async def seed_contacts(total: int = 5, user_id: UUID = None):
+async def seed_contacts(total: int = 10, user_id: UUID = None):
     db_gen = get_async_session()
     db = await anext(db_gen)
     query = await db.scalars(select(User))
@@ -38,7 +38,7 @@ async def seed_contacts(total: int = 5, user_id: UUID = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed leads into the database.")
     parser.add_argument(
-        "--total", type=int, default=5, help="Total number of leads to create"
+        "--total", type=int, default=10, help="Total number of leads to create"
     )
     parser.add_argument(
         "--user_id", type=UUID, help="Assign all leads to this user ID"
