@@ -13,7 +13,10 @@ from .contact_schema import (
     NoteResponse,
     TaskCreate,
     TaskResponse,
-    ContactDeleteResponse
+    ContactDeleteResponse,
+    ContactGetQuery,
+    ContactSortOrder,
+    ContactSortBy
 )
 from .error_schema import ErrorCode, ErrorResponse
 from .lead_schema import (
@@ -24,6 +27,13 @@ from .lead_schema import (
     LeadGetQuery,
     LeadUpdateStatus,
     LeadDeleteResponse,
+)
+from .mailing_schema import (
+    MailingCreate,
+    MailingDeleteResponse,
+    MailingResponse,
+    MailingUpdate,
+    PaginatedMailings
 )
 from .pipeline_schema import (
     PipelineRequest,
@@ -53,11 +63,4 @@ from .user_schema import (
     UserUpdateRequest,
     UserResponse,
     UserGetQuery
-)
-from .mailing_schema import (
-    MailingCreate,
-    MailingDeleteResponse,
-    MailingResponse,
-    MailingUpdate,
-    PaginatedMailings
 )

@@ -1,9 +1,11 @@
 from uuid import UUID
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import select, func, asc, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.contact_model import Contact, ContactNote, ContactTask
+from app.schemas import ContactGetQuery, ContactSortOrder, ContactSortBy
 
 
 class ContactRepository:
@@ -16,17 +18,14 @@ class ContactRepository:
         await self.db.refresh(contact)
         return contact
 
-    async def get_by_id(self, user_id: UUID, contact_id: UUID):
+    async def get_by_id(self, contact_id: UUID):
         query = (
             select(Contact)
-            .where(
-                Contact.id == contact_id,
-                Contact.user_id == user_id
-            )
+            .where(Contact.id == contact_id)
         )
         return await self.db.scalar(query)
 
-    async def get_all(self, query):
+    async def get_all(self, query: ContactGetQuery):
         q = select(Contact)
 
         total = await self.db.scalar(select(func.count(Contact.id)))
@@ -41,10 +40,13 @@ class ContactRepository:
                 Contact.email.ilike(like) |
                 Contact.company.ilike(like)
             )
-
-        sort_column = getattr(Contact, query.sort_by, Contact.name)
+        if query.sort_by == ContactSortBy.NAME:
+            sort_column = getattr(Contact, query.sort_by, Contact.name)
+        elif query.sort_by == ContactSortBy.CREATED_AT:
+            sort_column = getattr(Contact, query.sort_by, Contact.created_at)
+            
         q = q.order_by(
-            asc(sort_column) if query.sort_order == "asc" else desc(sort_column)
+            asc(sort_column) if query.sort_order == ContactSortOrder.ASC else desc(sort_column)
         )
 
         offset = (query.page - 1) * query.limit
@@ -67,16 +69,25 @@ class ContactRepository:
         await self.db.commit()
         return True
 
-    async def create_note(self, contact_id: UUID, data):
-        note = ContactNote(contact_id=contact_id, note=data.note)
+    async def create_note(self, user_id: UUID, contact_id: UUID, data):
+        note = ContactNote(user_id=user_id, contact_id=contact_id, note=data.note)
         self.db.add(note)
         await self.db.commit()
         await self.db.refresh(note)
-        return note
+        query = (
+            select(ContactNote).options(
+                selectinload(ContactNote.user),
+            )
+            .where(ContactNote.id == note.id)
+        )
+        return await self.db.scalar(query)
 
     async def get_notes(self, contact_id: UUID):
         result = await self.db.scalars(
-            select(ContactNote).where(ContactNote.contact_id == contact_id)
+            select(ContactNote).options(
+                selectinload(ContactNote.user),
+            )
+            .where(ContactNote.contact_id == contact_id)
         )
         return result.all()
 
@@ -91,10 +102,20 @@ class ContactRepository:
         self.db.add(task)
         await self.db.commit()
         await self.db.refresh(task)
-        return task
+
+        query = (
+            select(ContactTask).options(
+                selectinload(ContactTask.user),
+            )
+            .where(ContactTask.id == task.id)
+        )
+        return await self.db.scalar(query)
 
     async def get_tasks(self, contact_id: UUID):
         result = await self.db.scalars(
-            select(ContactTask).where(ContactTask.contact_id == contact_id)
+            select(ContactTask).options(
+                selectinload(ContactTask.user)
+            )
+            .where(ContactTask.contact_id == contact_id)
         )
         return result.all()
