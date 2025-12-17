@@ -1,4 +1,4 @@
-from .contact_model import Contact, ContactTask, ContactNote, UserTaskLink
+from .contact_model import Contact, ContactTask, ContactNote
 from .lead_model import (
     Lead,
     LeadStatus,
@@ -7,7 +7,7 @@ from .lead_model import (
     LeadIndustry,
     LeadCompanySize
 )
-
+from .mailing_model import Mailing
 from .pipeline_model import Pipeline, DealStage
 from .product_model import Product
 from .quotation_model import Quotation, QuotationItem, QuotationStatus
