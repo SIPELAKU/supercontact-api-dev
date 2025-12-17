@@ -57,10 +57,9 @@ async def get_all_contacts(
 async def create_contact(
         data: ContactCreate,
         service: ContactService = Depends(get_contact_service),
-        current_user=Depends(auth_require)
 ):
-    contact = await service.create_contact(user_id=current_user.id, data=data)
     contact = await service.create_contact(data=data)
+    # contact = await service.create_contact(data=data)
 
     return ResponseModel(
         data=contact
@@ -68,26 +67,23 @@ async def create_contact(
 
 
 @router.get("/{contact_id}", response_model=ResponseModel[ContactResponse], dependencies=[Depends(auth_require)])
-async def get_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service),
-                            current_user: User = Depends(auth_require)):
-    contact = await service.find_one_contact(user_id=current_user.id, contact_id=contact_id)
+async def get_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service)):
+    contact = await service.find_one_contact(contact_id=contact_id)
 
     return ResponseModel(data=contact)
 
 
-@router.put("/{contact_id}", response_model=ResponseModel[ContactResponse])
+@router.put("/{contact_id}", response_model=ResponseModel[ContactResponse], dependencies=[Depends(auth_require)])
 async def update_contact_by_id(contact_id: UUID, data: ContactUpdate,
-                               service: ContactService = Depends(get_contact_service),
-                               current_user: User = Depends(auth_require)):
-    updated = await service.update_contact(user_id=current_user.id, contact_id=contact_id, data=data)
+                               service: ContactService = Depends(get_contact_service)):
+    updated = await service.update_contact(contact_id=contact_id, data=data)
 
     return ResponseModel(data=updated)
 
 
-@router.delete("/{contact_id}", response_model=ResponseModel[ContactDeleteResponse])
-async def delete_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service),
-                               current_user: User = Depends(auth_require)):
-    contact = await service.delete_contact(user_id=current_user.id, contact_id=contact_id)
+@router.delete("/{contact_id}", response_model=ResponseModel[ContactDeleteResponse], dependencies=[Depends(auth_require)])
+async def delete_contact_by_id(contact_id: UUID, service: ContactService = Depends(get_contact_service)):
+    contact = await service.delete_contact(contact_id=contact_id)
 
     return ResponseModel(data={"id": contact_id, "deleted": contact})
 

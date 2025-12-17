@@ -144,7 +144,7 @@ class User(SQLModel, table=True):
     )
     leads: List["Lead"] = Relationship(back_populates="user")
     pipelines: List["Pipeline"] = Relationship(back_populates="user")
-    contacts: List["Contact"] = Relationship(back_populates="user")
+    # contacts: List["Contact"] = Relationship(back_populates="user")
     contact_tasks: List["ContactTask"] = Relationship(
         back_populates="users",
         link_model=UserTaskLink
