@@ -21,3 +21,4 @@ from .user_model import (
     UserOTPType,
 )
 from .userprofile_model import UserDetail
+from .note_model import Note

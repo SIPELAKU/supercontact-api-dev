@@ -1,8 +1,8 @@
 """initial migrations
 
-Revision ID: e3cd819308d9
+Revision ID: bd31910dd06d
 Revises: 
-Create Date: 2025-12-18 12:11:27.378482
+Create Date: 2025-12-18 20:21:04.054790
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e3cd819308d9'
+revision: str = 'bd31910dd06d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -139,6 +139,18 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('notes',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('content', sa.String(length=255), nullable=False),
+    sa.Column('reminder_date', sa.Date(), nullable=False),
+    sa.Column('reminder_time', sa.Time(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('pipelines',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('deal_name', sa.String(length=255), nullable=False),
@@ -217,6 +229,7 @@ def downgrade() -> None:
     op.drop_table('user_otps')
     op.drop_table('user_details')
     op.drop_table('pipelines')
+    op.drop_table('notes')
     op.drop_table('mailings')
     op.drop_index('idx_lead_status', table_name='leads')
     op.drop_index('idx_lead_source', table_name='leads')
