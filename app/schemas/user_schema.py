@@ -16,7 +16,7 @@ class UserGetQuery(SQLModel):
 class UserBase(SQLModel):
     fullname: Optional[str] = None
     email: Optional[EmailStr] = None
-    role: Optional[UserRole] = None
+    # role: Optional[UserRole] = None
     status: Optional[UserStatus] = None
 
 
