@@ -1,20 +1,22 @@
 import secrets
 from datetime import timezone, datetime
+from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core import verify_password, create_access_token
-from app.core.security import hash_password
+from app.core import hash_password, verify_password, create_token, TokenType
 from app.exceptions import AppException
 from app.models import User, UserOTP, UserOTPType
 from app.repositories import UserRepository
-from app.schemas import VerifyOtpRequest, VerifyOtpResponse
-from app.schemas.auth_schema import (
+from app.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
-    ResetPasswordRequest, ResendOtpRequest
+    ResetPasswordRequest,
+    ResendOtpRequest,
+    VerifyOtpRequest,
+    VerifyOtpResponse,
+    ErrorCode,
 )
-from app.schemas.error_schema import ErrorCode
 from app.utils import brevo_send_email
 
 
@@ -36,12 +38,12 @@ class AuthService:
         self.repo = UserRepository(db)
 
     @staticmethod
-    def create_token(user: User):
+    def create_access_token(user: User):
         data = {
             "user_id": str(user.id),
             "email": user.email,
         }
-        return create_access_token(data)
+        return create_token(data, token_type=TokenType.ACCESS_TOKEN)
 
     async def create_and_send_user_otp(self, user: User, otp_type: UserOTPType):
         user_otp = await self.repo.create_user_otp(user_otp=UserOTP(
@@ -107,6 +109,22 @@ class AuthService:
                 code=ErrorCode.BAD_REQUEST,
                 message="User already verified"
             )
+        if payload.otp_type == UserOTPType.RESET_PASSWORD and not user.is_verified:
+            await self.create_and_send_user_otp(user=user, otp_type=UserOTPType.VERIFICATION_EMAIL)
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.USER_NOT_VERIFIED,
+                message="User not verified, check email for verification user"
+            )
+
+        active_count = await self.repo.count_user_otp_active(user_id=user.id)
+        if active_count >= 3:
+            raise AppException(
+                status_code=429,
+                code=ErrorCode.TOO_MANY_REQUESTS,
+                message="Too many active OTP code. Please wait before requesting a new one."
+            )
+
         await self.create_and_send_user_otp(user=user, otp_type=payload.otp_type)
 
     async def verify_user_otp(self, payload: VerifyOtpRequest):
@@ -157,15 +175,21 @@ class AuthService:
             return VerifyOtpResponse(
                 email=payload.email,
                 otp_type=payload.otp_type,
-                access_token=self.create_token(user=user)
+                access_token=self.create_access_token(user=user),
+                reset_token=None,
             )
         # IF RESET PASSWORD
         elif payload.otp_type == UserOTPType.RESET_PASSWORD:
-            access_token = create_access_token({"user_id": str(user.id), "type": UserOTPType.RESET_PASSWORD})
+            reset_token = create_token(
+                {"user_id": str(user.id), "type": UserOTPType.RESET_PASSWORD},
+                token_type=TokenType.RESET_PASSWORD,
+                expire_minutes=10
+            )
             return VerifyOtpResponse(
                 email=user.email,
                 otp_type=payload.otp_type,
-                access_token=access_token
+                access_token=None,
+                reset_token=reset_token,
             )
 
         return None
@@ -184,18 +208,16 @@ class AuthService:
                 status_code=401, code=ErrorCode.AUTH_REQUIRED, message="Wrong password"
             )
 
-        access_token = self.create_token(user)
+        access_token = self.create_access_token(user)
         return user, access_token
 
-    async def reset_password(self, payload: ResetPasswordRequest):
-        user = await self.repo.get_by_email(payload.email)
+    async def reset_password(self, user_id: UUID, payload: ResetPasswordRequest):
+        user = await self.repo.get_by_id(user_id=user_id)
         if not user:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
                 message="User not found"
             )
-
-        user.password = hash_password(payload.new_password)
-        await self.repo.commit()
-        return "Password updated successfully"
+        user.password = hash_password(payload.password)
+        await self.repo.update(user)

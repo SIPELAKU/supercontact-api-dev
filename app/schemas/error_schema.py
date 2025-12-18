@@ -5,13 +5,15 @@ from pydantic import BaseModel
 
 
 class ErrorCode(StrEnum):
-    BAD_REQUEST = "BAD_REQUEST" 
+    BAD_REQUEST = "BAD_REQUEST"
     VALIDATION_ERROR = "VALIDATION_ERROR"  # Validasi data request salah
     AUTH_REQUIRED = "AUTH_REQUIRED"  # Token tidak ditemukan
     FORBIDDEN = "FORBIDDEN"  # Role tidak cukup
     NOT_FOUND = "NOT_FOUND"  # Data tidak ditemukan
     INTEGRATION_ERROR = "INTEGRATION_ERROR"  # Error komunikasi dengan Odoo
     SERVER_ERROR = "SERVER_ERROR"  # Unexpected
+    TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
+    USER_NOT_VERIFIED = "EMAIL_NOT_VERIFIED"
 
 
 class ErrorResponse(BaseModel):
