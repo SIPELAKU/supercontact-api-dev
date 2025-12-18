@@ -1,11 +1,13 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import EmailStr
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.user_model import User
+from app.models import UserOTP
+from app.models.user_model import User, UserOTPType
 from app.schemas import UserGetQuery
 
 
@@ -24,20 +26,15 @@ class UserRepository:
                 )
             )
 
-        if query_params.role:
-            query = query.where(User.role == query_params.role)
-
-        if query_params.status:
-            query = query.where(User.status == query_params.status)
-
-        # Count total rows
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self.db.execute(count_query)).scalar()
-
         # Pagination
         skip = (query_params.page - 1) * query_params.limit
-        result = await self.db.execute(query.offset(skip).limit(query_params.limit))
-        users = result.scalars().all()
+        query = query.offset(skip).limit(query_params.limit)
+        result = await self.db.scalars(query)
+        users = result.all()
+
+        # Count total rows
+        total_query = select(func.count()).select_from(query.subquery())
+        total = await self.db.scalar(total_query)
 
         return users, total
 
@@ -46,8 +43,8 @@ class UserRepository:
         return result.scalars().first()
 
     async def get_by_id(self, user_id: UUID):
-        result = await self.db.execute(select(User).where(User.id == user_id))
-        return result.scalars().first()
+        query = select(User).where(User.id == user_id)
+        return await self.db.scalar(query)
 
     async def create(self, user: User):
         self.db.add(user)
@@ -71,5 +68,35 @@ class UserRepository:
     async def get_total(self):
         return await self.db.scalar(select(func.count()).select_from(User))
 
-    async def commit(self):
+    async def count_user_otp_active(self, user_id: UUID):
+        query = select(func.count(UserOTP.id)).where(
+            UserOTP.user_id == user_id,
+            UserOTP.expires_at > datetime.now(timezone.utc),
+        )
+        result = await self.db.exec(query)
+        return result.one()
+
+    async def create_user_otp(self, user_otp: UserOTP):
+        self.db.add(user_otp)
+        await self.db.commit()
+        return user_otp
+
+    async def get_active_user_otp(self, user_id: UUID, otp_type: UserOTPType) -> UserOTP:
+        query = (
+            select(UserOTP)
+            .where(UserOTP.user_id == user_id)
+            .where(UserOTP.otp_type == otp_type)
+            .order_by(UserOTP.created_at.desc())
+        )
+
+        return (await self.db.exec(query)).first()
+
+    async def delete_all_user_otp(self, user_id: UUID, otp_type: UserOTPType):
+        query = (
+            delete(UserOTP)
+            .where(UserOTP.user_id == user_id)
+            .where(UserOTP.otp_type == otp_type)
+        )
+
+        await self.db.exec(query)
         await self.db.commit()

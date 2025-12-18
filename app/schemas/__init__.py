@@ -3,6 +3,12 @@ from .auth_schema import (
     UserLoginResponse,
     UserRegisterResponse,
     UserRegisterRequest,
+    ResendOtpRequest,
+    ResendOtpResponse,
+    VerifyOtpRequest,
+    VerifyOtpResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from .contact_schema import (
     ContactCreate,
