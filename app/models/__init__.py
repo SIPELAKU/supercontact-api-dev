@@ -11,5 +11,13 @@ from .mailing_model import Mailing
 from .pipeline_model import Pipeline, DealStage
 from .product_model import Product
 from .quotation_model import Quotation, QuotationItem, QuotationStatus
-from .user_model import User, UserRole, UserStatus, RolePermission, UserPosition
+from .user_model import (
+    User,
+    UserRole,
+    UserStatus,
+    RolePermission,
+    UserPosition,
+    UserOTP,
+    UserOTPType,
+)
 from .userprofile_model import UserDetail

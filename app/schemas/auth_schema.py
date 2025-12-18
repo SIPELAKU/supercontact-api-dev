@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import EmailStr
+from pydantic import EmailStr, StringConstraints
 from sqlmodel import SQLModel
+from typing_extensions import Annotated
 
-from app.models import UserPosition
+from app.models import UserPosition, UserOTPType
 
 
 class User(SQLModel):
@@ -14,13 +15,21 @@ class User(SQLModel):
     email: str
     role: Optional[UUID]
     status: str
+    is_verified: bool
     avatar_initial: str
     created_at: datetime
     updated_at: datetime
 
 
 class UserRegisterRequest(SQLModel):
-    fullname: str
+    fullname: Annotated[
+        str,
+        StringConstraints(
+            min_length=3,
+            max_length=100,
+            strip_whitespace=True
+        )
+    ]
     email: EmailStr
     phone: str
     company: str
@@ -30,7 +39,7 @@ class UserRegisterRequest(SQLModel):
 
 
 class UserRegisterResponse(SQLModel):
-    user: User
+    message: str
 
     class Config:
         from_attributes = True
@@ -49,21 +58,34 @@ class UserLoginResponse(SQLModel):
         from_attributes = True
 
 
-class ForgotPasswordRequest(SQLModel):
-    email: EmailStr
-
-
-class ForgotPasswordResponse(SQLModel):
-    reset_token: str
-
-    class Config:
-        from_attributes = True
-
-
 class ResetPasswordRequest(SQLModel):
     email: EmailStr
     new_password: str
     token: str
 
+
 class ResetPasswordResponse(SQLModel):
     message: str
+
+
+class ResendOtpRequest(SQLModel):
+    email: EmailStr
+    otp_type: UserOTPType
+
+
+class ResendOtpResponse(SQLModel):
+    email: EmailStr
+    otp_type: UserOTPType
+    valid: bool
+
+
+class VerifyOtpRequest(SQLModel):
+    email: EmailStr
+    otp_type: UserOTPType
+    code: str
+
+
+class VerifyOtpResponse(SQLModel):
+    email: EmailStr
+    otp_type: UserOTPType
+    access_token: str

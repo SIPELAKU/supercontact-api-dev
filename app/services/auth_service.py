@@ -1,12 +1,34 @@
+import secrets
+from datetime import timezone, datetime
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import verify_password, create_access_token
-from app.exceptions import AppException
-from app.models import User
-from app.repositories import UserRepository
-from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest, ForgotPasswordRequest, ResetPasswordRequest
-from app.schemas.error_schema import ErrorCode
 from app.core.security import hash_password
+from app.exceptions import AppException
+from app.models import User, UserOTP, UserOTPType
+from app.repositories import UserRepository
+from app.schemas import VerifyOtpRequest, VerifyOtpResponse
+from app.schemas.auth_schema import (
+    UserRegisterRequest,
+    UserLoginRequest,
+    ResetPasswordRequest, ResendOtpRequest
+)
+from app.schemas.error_schema import ErrorCode
+from app.utils import brevo_send_email
+
+
+def generate_avatar_initial(fullname: str) -> str:
+    parts = fullname.strip().split()
+
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+
+    return parts[0][0].upper()
+
+
+def generate_6_digit_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 class AuthService:
@@ -21,40 +43,132 @@ class AuthService:
         }
         return create_access_token(data)
 
+    async def create_and_send_user_otp(self, user: User, otp_type: UserOTPType):
+        user_otp = await self.repo.create_user_otp(user_otp=UserOTP(
+            user_id=user.id,
+            code=generate_6_digit_code(),
+            otp_type=otp_type
+        ))
+
+        payload = {
+            "sender": {
+                "email": "afifu5882@gmail.com",
+                "name": "Supercontact App"
+            },
+            "to": [
+                {"email": user.email, "name": user.fullname}
+            ],
+            "templateId": 10,
+            "params": {
+                "type": user_otp.otp_type,
+                "fullname": user.fullname,
+                "purpose": user_otp.otp_type.purpose,
+                "otp": user_otp.code,
+                "expires_at": 10
+            }
+        }
+        await brevo_send_email(payload=payload)
+
     async def register(self, payload: UserRegisterRequest):
         user = await self.repo.get_by_email(email=payload.email)
-
         if user:
             raise AppException(
                 status_code=400,
                 code=ErrorCode.BAD_REQUEST,
                 message="Email already registered"
             )
-
-        def generate_avatar_initial(fullname: str) -> str:
-            if not fullname:
-                return ""
-
-            parts = fullname.strip().split()
-
-            if len(parts) >= 2:
-                return (parts[0][0] + parts[-1][0]).upper()
-
-            return parts[0][0].upper()
+        if payload.password != payload.confirm_password:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Passwords don't match"
+            )
 
         avatar_initial = generate_avatar_initial(payload.fullname)
 
-        user = User(
-            fullname=payload.fullname,
-            email=payload.email,
-            phone=payload.phone,
-            company=payload.company,
-            position=payload.position,
-            password=hash_password(payload.password),
-            confirm_password=hash_password(payload.password),
-            avatar_initial=avatar_initial,
-        )
-        return await self.repo.create(user)
+        user = User(**payload.model_dump())
+        user.password = hash_password(payload.password)
+        user.avatar_initial = avatar_initial
+        await self.repo.create(user)
+
+        await self.create_and_send_user_otp(user=user, otp_type=UserOTPType.VERIFICATION_EMAIL)
+
+    async def resend_user_otp(self, payload: ResendOtpRequest):
+        user = await self.repo.get_by_email(email=payload.email)
+        if not user:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="User not found"
+            )
+        if payload.otp_type == UserOTPType.VERIFICATION_EMAIL and user.is_verified:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="User already verified"
+            )
+        await self.create_and_send_user_otp(user=user, otp_type=payload.otp_type)
+
+    async def verify_user_otp(self, payload: VerifyOtpRequest):
+        user = await self.repo.get_by_email(email=payload.email)
+        if not user:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="User not found"
+            )
+        if payload.otp_type == UserOTPType.VERIFICATION_EMAIL and user.is_verified:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="User already verified"
+            )
+
+        user_otp = await self.repo.get_active_user_otp(user_id=user.id, otp_type=payload.otp_type)
+        if not user_otp:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Verification code not found"
+            )
+        if payload.code != user_otp.code:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Invalid verification code"
+            )
+        now = datetime.now(timezone.utc)
+        if user_otp.expires_at < now:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Verification code has expired"
+            )
+
+        # Invalidate OTP
+        await self.repo.delete_all_user_otp(user_id=user.id, otp_type=payload.otp_type)
+
+        # IF VERIFICATION EMAIL
+        if payload.otp_type == UserOTPType.VERIFICATION_EMAIL:
+            # Mark user as verified
+            user.is_verified = True
+            await self.repo.update(user)
+
+            return VerifyOtpResponse(
+                email=payload.email,
+                otp_type=payload.otp_type,
+                access_token=self.create_token(user=user)
+            )
+        # IF RESET PASSWORD
+        elif payload.otp_type == UserOTPType.RESET_PASSWORD:
+            access_token = create_access_token({"user_id": str(user.id), "type": UserOTPType.RESET_PASSWORD})
+            return VerifyOtpResponse(
+                email=user.email,
+                otp_type=payload.otp_type,
+                access_token=access_token
+            )
+
+        return None
 
     async def login(self, payload: UserLoginRequest):
         user = await self.repo.get_by_email(email=payload.email)
@@ -72,16 +186,6 @@ class AuthService:
 
         access_token = self.create_token(user)
         return user, access_token
-
-    async def forgot_password(self, payload: ForgotPasswordRequest):
-        user = await self.repo.get_by_email(email=payload.email)
-        if not user:
-            raise AppException(
-                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
-            )
-
-        reset_token = create_access_token({"sub": str(user.id), "type": "reset"})
-        return reset_token
 
     async def reset_password(self, payload: ResetPasswordRequest):
         user = await self.repo.get_by_email(payload.email)

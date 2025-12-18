@@ -2,7 +2,6 @@ import base64
 from math import ceil
 from uuid import UUID
 
-import httpx
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
@@ -10,7 +9,7 @@ from app.models import QuotationStatus
 from app.repositories import QuotationRepository
 from app.schemas import ErrorCode, QuotationRequest
 from app.schemas.quotation_schema import QuotationGetQuery
-from app.utils import BREVO_URL, get_brevo_headers
+from app.utils import brevo_send_email
 
 
 class QuotationService:
@@ -86,15 +85,7 @@ class QuotationService:
                 }
             ],
         }
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                BREVO_URL,
-                headers=get_brevo_headers(),
-                json=payload,
-            )
-
-        if response.status_code >= 400:
-            raise Exception(f"Brevo error: {response.text}")
+        await brevo_send_email(payload=payload)
 
         return {
             "to_email": to_email,
