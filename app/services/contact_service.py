@@ -59,7 +59,7 @@ class ContactService:
             raise AppException(
                 status_code=404,
                 code=ErrorCode.NOT_FOUND,
-                message="COntact not found"
+                message="Contact not found"
             )
         return await self.repo.delete(contact)
 
