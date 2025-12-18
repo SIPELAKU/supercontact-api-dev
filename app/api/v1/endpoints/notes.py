@@ -22,7 +22,7 @@ async def get_note_service(db: AsyncSession = Depends(get_async_session)):
     response_model=ResponseModel[PaginatedNote],
     dependencies=[Depends(auth_require)]
 )
-async def get_all_contacts(
+async def get_all_notes(
         page: int = Query(1, ge=1),
         limit: int = Query(10, ge=1, le=100, ),
         search: str = Query(None),
@@ -43,7 +43,7 @@ async def get_all_contacts(
     ))
 
 @router.post("/", response_model=ResponseModel[NoteResponse], dependencies=[Depends(auth_require)])
-async def create_contact(
+async def create_notes(
         data: NoteCreate,
         service: NoteService = Depends(get_note_service),
         current_user=Depends(auth_require),
