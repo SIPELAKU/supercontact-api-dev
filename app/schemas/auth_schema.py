@@ -59,9 +59,8 @@ class UserLoginResponse(SQLModel):
 
 
 class ResetPasswordRequest(SQLModel):
-    email: EmailStr
-    new_password: str
-    token: str
+    password: str
+    confirm_password: str
 
 
 class ResetPasswordResponse(SQLModel):
@@ -88,4 +87,5 @@ class VerifyOtpRequest(SQLModel):
 class VerifyOtpResponse(SQLModel):
     email: EmailStr
     otp_type: UserOTPType
-    access_token: str
+    access_token: Optional[str]
+    reset_token: Optional[str]

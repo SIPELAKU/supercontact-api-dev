@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str
     SECRET_KEY: str
+    RESET_PASSWORD_KEY: str
     DATABASE_URL: str
     ALGORITHM: str
     CORS_ORIGINS: str

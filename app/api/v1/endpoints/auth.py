@@ -1,11 +1,22 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core import reset_token
 from app.db import get_async_session
-from app.schemas import ResponseModel, UserLoginResponse, UserLoginRequest, VerifyOtpResponse, VerifyOtpRequest, \
-    ResendOtpRequest, ResendOtpResponse
-from app.schemas.auth_schema import UserRegisterResponse, UserRegisterRequest, ResetPasswordRequest, \
-    ResetPasswordResponse
+from app.schemas import (
+    ResponseModel,
+    UserLoginResponse,
+    UserLoginRequest, VerifyOtpResponse,
+    VerifyOtpRequest,
+    ResendOtpRequest,
+    ResendOtpResponse,
+    UserRegisterResponse,
+    UserRegisterRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+)
 from app.services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -43,7 +54,7 @@ async def user_login(
 
 # RESEND USER OTP
 @router.post("/otp/resend", response_model=ResponseModel[ResendOtpResponse])
-async def verify_user_otp(
+async def resend_user_otp(
         payload: ResendOtpRequest,
         service: AuthService = Depends(get_auth_service),
 ):
@@ -67,11 +78,16 @@ async def verify_user_otp(
     return ResponseModel(data=data)
 
 
-@router.post("/reset-password", response_model=ResponseModel[ResetPasswordResponse])
+@router.post(
+    "/reset-password",
+    response_model=ResponseModel[ResetPasswordResponse]
+)
 async def reset_password(
-        payload: ResetPasswordRequest, service: AuthService = Depends(get_auth_service)
+        payload: ResetPasswordRequest,
+        user_id: UUID = Depends(reset_token),
+        service: AuthService = Depends(get_auth_service),
 ):
-    message = await service.reset_password(payload)
+    await service.reset_password(user_id=user_id, payload=payload)
     return ResponseModel(
-        data=ResetPasswordResponse(message=message)
+        data=ResetPasswordResponse(message="Reset Password Successful")
     )
