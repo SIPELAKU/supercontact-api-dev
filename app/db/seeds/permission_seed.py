@@ -7,16 +7,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.role_model import Permission
 
-DATABASE_URL = (
-    "postgresql+asyncpg://postgres:codedavid18@localhost:5433/user_management"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-# =========================================
-# PERMISSION STANDARD (FINAL — NO BRANCH)
-# =========================================
 PERMISSIONS = [
     # USER
     "user:create",
@@ -36,6 +31,7 @@ PERMISSIONS = [
     "department:update",
     "department:delete",
     "department:*",
+    # PERMISSION
     "permission:*",
 ]
 
@@ -89,7 +85,7 @@ async def main():
     async with async_session() as session:
         await seed_permissions(session)
 
-    print("✅ Permissions seeded (branch removed)")
+    print("Permissions seeded (branch removed)")
 
 
 if __name__ == "__main__":

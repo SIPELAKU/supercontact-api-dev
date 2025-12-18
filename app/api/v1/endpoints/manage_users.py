@@ -1,107 +1,88 @@
-from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, Query, status
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db import get_async_session
+from app.db.session import get_async_session
+from app.services.manage_user_service import ManageUserService
 from app.schemas import (
-    UserCreateRequest,
-    UserUpdateRequest,
-    UserResponse,
+    ManageUserCreateRequest,
+    ManageUserUpdateRequest,
+    ManageUserResponse,
     ManageUserListResponse,
-    ManagerDropdown,
-
 )
-from app.services import ManageUserService
-from app.services import UserService
-
-router = APIRouter(prefix="/manage-users", tags=["Manage Users"])
 
 
-def get_user_service(
-        db: AsyncSession = Depends(get_async_session),
-) -> UserService:
-    return UserService(db)
+router = APIRouter(
+    prefix="/manage-users",
+    tags=["Manage Users"],
+)
 
 
-# CREATE USER
 @router.post(
     "",
-    response_model=UserResponse,
-    # dependencies=[Depends(require_permissions("user:create"))],
+    response_model=ManageUserResponse,
+    status_code=status.HTTP_201_CREATED,
 )
-async def create_user(
-        data: UserCreateRequest,
-        service: ManageUserService = Depends(get_user_service),
+async def create_manage_user(
+    payload: ManageUserCreateRequest,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.create_user(data)
+    service = ManageUserService(db)
+    return await service.create(payload)
+
+
+@router.get(
+    "/{id}",
+    response_model=ManageUserResponse,
+)
+async def get_manage_user(
+    id: UUID,
+    db: AsyncSession = Depends(get_async_session),
+):
+    service = ManageUserService(db)
+    return await service.get_by_id(id)
 
 
 @router.get(
     "",
     response_model=ManageUserListResponse,
-    # dependencies=[Depends(require_permissions("user:read"))],
 )
-async def list_users(
-        skip: int = Query(0, ge=0),
-        limit: int = Query(20, ge=1, le=200),
-        service: UserService = Depends(get_user_service),
+async def list_manage_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    users = await service.list_users(skip=skip, limit=limit)
-    return ManageUserListResponse(
-        total=len(users),
-        items=users,
-    )
+    service = ManageUserService(db)
+
+    items = await service.list(skip=skip, limit=limit)
+
+    return {
+        "total": len(items),
+        "items": items,
+    }
 
 
-@router.get(
-    "/dropdown/managers",
-    response_model=List[ManagerDropdown],
-    # dependencies=[Depends(require_permissions("user:read"))],
-)
-async def manager_dropdown(
-        service: UserService = Depends(get_user_service),
-):
-    """ """
-    return await service.get_manager_dropdown()
-
-
-# GET USER DETAIL
-@router.get(
-    "/{manage_user_id}",
-    response_model=UserResponse,
-    # dependencies=[Depends(require_permissions("user:read"))],
-)
-async def get_user(
-        manage_user_id: UUID,
-        service: UserService = Depends(get_user_service),
-):
-    return await service.get_user(manage_user_id)
-
-
-# UPDATE USER
 @router.put(
-    "/{manage_user_id}",
-    response_model=UserResponse,
-    # dependencies=[Depends(require_permissions("user:update"))],
+    "/{id}",
+    response_model=ManageUserResponse,
 )
-async def update_user(
-        manage_user_id: UUID,
-        data: UserUpdateRequest,
-        service: UserService = Depends(get_user_service),
+async def update_manage_user(
+    id: UUID,
+    payload: ManageUserUpdateRequest,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.update_user(manage_user_id, data)
+    service = ManageUserService(db)
+    return await service.update(id, payload)
 
 
-# DELETE USER
 @router.delete(
-    "/{manage_user_id}",
-    # dependencies=[Depends(require_permissions("user:delete"))],
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_user(
-        manage_user_id: UUID,
-        service: UserService = Depends(get_user_service),
+async def delete_manage_user(
+    id: UUID,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    await service.delete_user(manage_user_id)
-    return {"message": "User deleted successfully"}
+    service = ManageUserService(db)
+    await service.delete(id)

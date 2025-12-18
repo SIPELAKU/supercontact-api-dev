@@ -12,10 +12,7 @@ class PermissionService:
         self.db = db
         self.repo = PermissionRepository(db)
 
-    # ============================
-    # CREATE (WITH ROLE ACCESS)
-    # ============================
-
+    # CREATE
     async def create_permission(
         self,
         permission_name: str,
@@ -32,22 +29,17 @@ class PermissionService:
                 message="Permission already exists",
             )
 
-        # 1️⃣ CREATE PERMISSION
         perm = Permission(permission_name=permission_name)
         self.db.add(perm)
         await self.db.commit()
         await self.db.refresh(perm)
 
-        # 2️⃣ ASSIGN ROLES (OPTIONAL)
         if role_names is not None:
             await self._assign_roles_by_name_internal(perm.id, role_names)
 
         return perm
 
-    # ============================
-    # UPDATE (🔥 SAME BEHAVIOR AS CREATE)
-    # ============================
-
+    # UPDATE
     async def update_permission(
         self,
         permission_id: UUID,
@@ -63,7 +55,6 @@ class PermissionService:
                 message="Permission not found",
             )
 
-        # 1️⃣ UPDATE NAME
         if permission_name:
             exists = await self.db.execute(
                 select(Permission).where(
@@ -83,16 +74,12 @@ class PermissionService:
         await self.db.commit()
         await self.db.refresh(perm)
 
-        # 2️⃣ UPDATE ROLE ACCESS (OVERWRITE)
         if role_names is not None:
             await self._assign_roles_by_name_internal(perm.id, role_names)
 
         return perm
 
-    # ============================
     # DELETE
-    # ============================
-
     async def delete_permission(self, permission_id: UUID):
         perm = await self.repo.get_permission_by_id(permission_id)
         if not perm:
@@ -105,10 +92,7 @@ class PermissionService:
         await self.db.delete(perm)
         await self.db.commit()
 
-    # ============================
-    # ASSIGN ROLES (UUID)
-    # ============================
-
+    # ASSIGN ROLES
     async def assign_roles(
         self,
         permission_id: UUID,
@@ -135,10 +119,7 @@ class PermissionService:
 
         await self.repo.assign_roles(permission_id, role_ids)
 
-    # ============================
-    # ASSIGN ROLES (ROLE_NAME)
-    # ============================
-
+    # ASSIGN ROLES
     async def assign_roles_by_name(
         self,
         permission_id: UUID,
@@ -153,10 +134,6 @@ class PermissionService:
             )
 
         await self._assign_roles_by_name_internal(permission_id, role_names)
-
-    # ============================
-    # INTERNAL HELPER (🔥 REUSED)
-    # ============================
 
     async def _assign_roles_by_name_internal(
         self,
@@ -182,10 +159,6 @@ class PermissionService:
             permission_id,
             [r.id for r in roles],
         )
-
-    # ============================
-    # REMOVE ROLE
-    # ============================
 
     async def remove_role(
         self,

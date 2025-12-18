@@ -3,31 +3,19 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-from app.models.department_model import DepartmentName
 
 
 class DepartmentBase(BaseModel):
-    name: DepartmentName
-    manager_id: Optional[UUID] = None
-
-    model_config = ConfigDict(from_attributes=True)
+    name: str
 
 
 class DepartmentCreate(DepartmentBase):
-    branches: List[str] = Field(
-        default_factory=list, description="List nama branch yang akan dibuat langsung"
-    )
+    branches: List[str] = Field(default_factory=list)
 
 
 class DepartmentUpdate(BaseModel):
-    name: Optional[DepartmentName] = None
-    manager_id: Optional[UUID] = None
-
-    branches: Optional[List[str]] = Field(
-        default=None, description="List branch baru (optional)"
-    )
-
-    model_config = ConfigDict(from_attributes=True)
+    name: Optional[str] = None
+    branches: Optional[List[str]] = None
 
 
 class BranchReadSimple(BaseModel):
@@ -42,6 +30,8 @@ class DepartmentRead(DepartmentBase):
     created_at: datetime
     updated_at: datetime
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class DepartmentReadWithRelations(DepartmentRead):
-    branches: List[BranchReadSimple] = []
+    branches: List[BranchReadSimple] = Field(default_factory=list)

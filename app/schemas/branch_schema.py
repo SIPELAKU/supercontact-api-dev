@@ -1,31 +1,27 @@
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 from uuid import UUID
-from sqlmodel import SQLModel, Field
 
-if TYPE_CHECKING:
-    from app.schemas.department_schema import DepartmentRead
+from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.department_schema import DepartmentRead
 
 
-class BranchBase(SQLModel):
+class BranchBase(BaseModel):
     name: str
-    department_id: UUID
 
 
 class BranchCreate(BranchBase):
-    pass
+    department_id: UUID = Field(...)
 
 
-class BranchUpdate(SQLModel):
+class BranchUpdate(BaseModel):
     name: Optional[str] = None
-    department_id: Optional[UUID] = None
 
 
 class BranchRead(BranchBase):
     id: UUID
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class BranchReadWithDepartment(BranchRead):
-    department: Optional["DepartmentRead"] = None
-
-
-BranchReadWithDepartment.update_forward_refs()
+    department: Optional[DepartmentRead] = None

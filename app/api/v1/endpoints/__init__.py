@@ -9,3 +9,4 @@ from .quotations import router as quotations_router
 from .roles import router as roles_router
 from .userprofile import router as userprofile_router
 from .users import router as users_router
+from .department import router as department_router

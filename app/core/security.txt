@@ -1,12 +1,10 @@
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
-import hashlib
-import hmac
-import secrets
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, ExpiredSignatureError, JWTError
+from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -15,22 +13,10 @@ from app.models import UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
-
-# ==================================================
-# CONSTANTS
-# ==================================================
-
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
-
-_HASH_NAME = "sha256"
-_ITERATIONS = 120_000
-_SALT_SIZE = 32
-
-
-# ==================================================
-# DATABASE DEPENDENCY
-# ==================================================
 
 
 async def get_db_session():
@@ -40,57 +26,17 @@ async def get_db_session():
         yield session
 
 
-# ==================================================
-# PASSWORD HASHING (Python 3.14 SAFE)
-# ==================================================
-
-
 def hash_password(password: str) -> str:
-    """
-    Hash password using PBKDF2-HMAC-SHA256
-    Format:
-    pbkdf2$iterations$salt$hash
-    """
-    salt = secrets.token_bytes(_SALT_SIZE)
-    dk = hashlib.pbkdf2_hmac(
-        _HASH_NAME,
-        password.encode("utf-8"),
-        salt,
-        _ITERATIONS,
-    )
-    return f"pbkdf2${_ITERATIONS}${salt.hex()}${dk.hex()}"
+    return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        algo, iterations, salt_hex, hash_hex = hashed_password.split("$")
-        if algo != "pbkdf2":
-            return False
-
-        salt = bytes.fromhex(salt_hex)
-        expected_hash = bytes.fromhex(hash_hex)
-
-        dk = hashlib.pbkdf2_hmac(
-            _HASH_NAME,
-            plain_password.encode("utf-8"),
-            salt,
-            int(iterations),
-        )
-
-        return hmac.compare_digest(dk, expected_hash)
-
-    except Exception:
-        return False
-
-
-# ==================================================
-# JWT TOKEN
-# ==================================================
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(
-    data: dict,
-    expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES,
+        data: dict,
+        expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES,
 ) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
@@ -124,14 +70,9 @@ def decode_access_token(token: str) -> dict:
         )
 
 
-# ==================================================
-# AUTH DEPENDENCY
-# ==================================================
-
-
 async def auth_require(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db_session),
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+        db: AsyncSession = Depends(get_db_session),
 ):
     if not credentials:
         raise AppException(
@@ -166,11 +107,6 @@ async def auth_require(
         )
 
     return user
-
-
-# ==================================================
-# ROLE GUARD
-# ==================================================
 
 
 def check_roles(*allowed_roles: str):

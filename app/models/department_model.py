@@ -1,24 +1,21 @@
-from datetime import datetime, timezone
-from enum import StrEnum
-from typing import List
+from datetime import datetime
+from typing import List, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, func, Enum as SAEnum, String
+from sqlalchemy import Column, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import SQLModel, Field, Relationship
 
+if TYPE_CHECKING:
+    from app.models.manage_user_model import ManageUser
+    from app.models.branch_model import Branch
+
 
 def utc_now():
+    from datetime import datetime, timezone
+
     return datetime.now(timezone.utc)
-
-
-class DepartmentName(StrEnum):
-    MARKETING = "Marketing"
-    SALES = "Sales"
-    ENGINEERING = "Engineering"
-    HUMAN_RESOURCES = "Human Resources"
-    CUSTOMER_SUPPORT = "Customer Support"
 
 
 class Department(SQLModel, table=True):
@@ -30,23 +27,20 @@ class Department(SQLModel, table=True):
         sa_column=Column(PG_UUID(as_uuid=True), primary_key=True, index=True),
     )
 
-    name: DepartmentName = Field(
-        sa_column=Column(
-            SAEnum(
-                DepartmentName,
-                values_callable=lambda e: [item.value for item in e],
-                name="department_name_enum",
-                native_enum=False,
-            ),
-            nullable=False,
-        )
+    name: str = Field(sa_column=Column(String(100), nullable=False))
+
+    manage_users: List["ManageUser"] = Relationship(back_populates="department")
+
+    branches: List["Branch"] = Relationship(
+        back_populates="department",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    branch: str = Field(sa_column=Column(String(50), nullable=False, unique=True))
 
     created_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now()),
     )
+
     updated_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(
@@ -55,6 +49,3 @@ class Department(SQLModel, table=True):
             onupdate=func.now(),
         ),
     )
-
-    # RELATIONSHIP
-    user_departments: List["ManageUser"] = Relationship(back_populates="department")

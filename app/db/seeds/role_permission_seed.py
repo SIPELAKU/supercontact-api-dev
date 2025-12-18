@@ -7,9 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.role_model import Role, Permission, RolePermission
 
-DATABASE_URL = (
-    "postgresql+asyncpg://postgres:codedavid18@localhost:5433/user_management"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -42,7 +40,7 @@ async def seed_role_permissions(session: AsyncSession):
         role = result.scalar_one_or_none()
 
         if not role:
-            print(f"⚠️ Role '{role_name}' not found, skipped")
+            print(f"Role '{role_name}' not found, skipped")
             continue
 
         for perm_name in permission_names:
@@ -52,7 +50,7 @@ async def seed_role_permissions(session: AsyncSession):
             permission = result.scalar_one_or_none()
 
             if not permission:
-                print(f"⚠️ Permission '{perm_name}' not found, skipped")
+                print(f"Permission '{perm_name}' not found, skipped")
                 continue
 
             result = await session.execute(
@@ -84,7 +82,7 @@ async def main():
     async with async_session() as session:
         await seed_role_permissions(session)
 
-    print("✅ Role permissions synced successfully")
+    print("Role permissions synced successfully")
 
 
 if __name__ == "__main__":

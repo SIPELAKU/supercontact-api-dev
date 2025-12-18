@@ -6,3 +6,4 @@ from .product_repository import ProductRepository
 from .quotation_repository import QuotationRepository
 from .role_repository import RoleRepository
 from .user_repository import UserRepository
+from .department_repository import DepartmentRepository

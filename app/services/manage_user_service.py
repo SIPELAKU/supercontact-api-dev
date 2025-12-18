@@ -1,172 +1,232 @@
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
-from app.models import Department, Role, User
-from app.repositories import UserRepository
-from app.schemas import ErrorCode, UserCreateRequest, UserUpdateRequest
+from app.models.manage_user_model import ManageUser
+from app.models.role_model import Role
+from app.models.department_model import Department
+from app.models.branch_model import Branch
+from app.models.user_model import User
+from app.schemas.manage_user_schema import (
+    ManageUserCreateRequest,
+    ManageUserUpdateRequest,
+    ManageUserResponse,
+    UserLevel,
+)
+from app.schemas.error_schema import ErrorCode
 
 
 class ManageUserService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.repo = UserRepository(db)
 
-    async def _get_role_by_name(self, role_name: str) -> Role:
-        result = await self.db.execute(select(Role).where(Role.role_name == role_name))
-        role = result.scalars().first()
-        if not role:
-            raise AppException(ErrorCode.ROLE_NOT_FOUND, "Role not found")
-        return role
+    async def _get_or_404(self, model, condition, code, message):
+        result = await self.db.execute(select(model).where(condition))
+        obj = result.scalars().first()
+        if not obj:
+            raise AppException(status_code=404, code=code, message=message)
+        return obj
 
-    async def _get_department_by_name(
-            self, department_name: Optional[str]
-    ) -> Optional[Department]:
-        if not department_name:
-            return None
-
-        result = await self.db.execute(
-            select(Department).where(Department.name == department_name)
-        )
-        department = result.scalars().first()
-        if not department:
-            raise AppException(ErrorCode.DEPARTMENT_NOT_FOUND, "Department not found")
-        return department
-
-    # async def _get_branch_by_name(self, branch_name: Optional[str]) -> Optional[Branch]:
-    #     if not branch_name:
-    #         return None
-    #
-    #     result = await self.db.execute(select(Branch).where(Branch.name == branch_name))
-    #     branch = result.scalars().first()
-    #     if not branch:
-    #         raise AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found")
-    #     return branch
-
-    # async def _validate_branch_belongs_to_department(
-    #         self,
-    #         branch: Optional[Branch],
-    #         department: Optional[Department],
-    # ):
-    #     if not branch or not department:
-    #         return
-    #
-    #     if branch.department_id != department.id:
-    #         raise AppException(
-    #             ErrorCode.BRANCH_NOT_IN_DEPARTMENT,
-    #             "Branch does not belong to selected department",
-    #         )
-
-    async def _check_unique_employee_id(
-            self,
-            employee_id: Optional[str],
-            exclude_user_id: Optional[UUID] = None,
+    async def _validate_unique_employee_id(
+        self, employee_id: Optional[str], exclude_id: Optional[UUID] = None
     ):
         if not employee_id:
             return
 
-        query = select(User).where(User.employee_id == employee_id)
-        if exclude_user_id:
-            query = query.where(User.id != exclude_user_id)
+        query = select(ManageUser).where(ManageUser.employee_id == employee_id)
+        if exclude_id:
+            query = query.where(ManageUser.id != exclude_id)
 
         result = await self.db.execute(query)
         if result.scalars().first():
             raise AppException(
-                ErrorCode.USER_EMPLOYEE_ID_EXISTS,
-                "Employee ID already used",
+                status_code=409,
+                code=ErrorCode.EMPLOYEE_ID_ALREADY_EXISTS,
+                message="Employee ID already exists",
             )
 
-    async def create_user(self, data: UserCreateRequest) -> User:
-        """ """
-        auth_user = await self.auth_repo.get_by_email(data.email)
-        if not auth_user:
+    def _validate_position_rule(self, user_level: UserLevel, position):
+        if user_level in {UserLevel.SUPERVISOR, UserLevel.MANAGER} and not position:
             raise AppException(
-                ErrorCode.USER_NOT_REGISTERED,
-                "Email belum terdaftar",
+                status_code=400,
+                code=ErrorCode.INVALID_POSITION,
+                message="Supervisor or Manager must have a position",
             )
 
-        user_id = auth_user.user_id
+    async def _to_response(self, mu: ManageUser) -> ManageUserResponse:
+        user = await self.db.get(User, mu.user_id)
 
-        exists = await self.repo.get_by_user_id(user_id)
-        if exists:
+        role_name = None
+        department_name = None
+        branch_name = None
+
+        if mu.role_id:
+            role = await self.db.get(Role, mu.role_id)
+            role_name = role.role_name if role else None
+
+        if mu.department_id:
+            department = await self.db.get(Department, mu.department_id)
+            department_name = department.name if department else None
+
+        if mu.branch_id:
+            branch = await self.db.get(Branch, mu.branch_id)
+            branch_name = branch.name if branch else None
+
+        return ManageUserResponse(
+            id=mu.id,
+            user_id=user.id,
+            fullname=user.fullname,
+            email=user.email,
+            role=role_name,
+            department=department_name,
+            branch=branch_name,
+            user_level=mu.user_level,
+            position=mu.position,
+            employee_id=mu.employee_id,
+            status=mu.status,
+            created_at=mu.created_at,
+            updated_at=mu.updated_at,
+        )
+
+    # CREATE
+    async def create(self, data: ManageUserCreateRequest) -> ManageUserResponse:
+        user = await self._get_or_404(
+            User,
+            User.email == data.email,
+            ErrorCode.USER_NOT_FOUND,
+            "User not found",
+        )
+
+        exists = await self.db.execute(
+            select(ManageUser).where(ManageUser.user_id == user.id)
+        )
+        if exists.scalars().first():
             raise AppException(
-                ErrorCode.USER_ALREADY_EXISTS,
-                "User sudah ditambahkan",
+                status_code=409,
+                code=ErrorCode.USER_ALREADY_ASSIGNED,
+                message="User already activated",
             )
 
-        role = await self._get_role_by_name(data.role)
-        department = await self._get_department_by_name(data.department)
-        branch = await self._get_branch_by_name(data.branch)
+        role_id = None
+        department_id = None
+        branch_id = None
 
-        await self._validate_branch_belongs_to_department(branch, department)
+        if data.role:
+            role = await self._get_or_404(
+                Role,
+                Role.role_name == data.role,
+                ErrorCode.ROLE_NOT_FOUND,
+                "Role not found",
+            )
+            role_id = role.id
 
-        user = User(
-            user_id=user_id,
-            role_id=role.id,
-            department_id=department.id if department else None,
-            branch_id=branch.id if branch else None,
+        if data.department:
+            department = await self._get_or_404(
+                Department,
+                Department.name == data.department,
+                ErrorCode.DEPARTMENT_NOT_FOUND,
+                "Department not found",
+            )
+            department_id = department.id
+
+            if data.branch:
+                branch = await self._get_or_404(
+                    Branch,
+                    (Branch.name == data.branch)
+                    & (Branch.department_id == department.id),
+                    ErrorCode.BRANCH_NOT_FOUND,
+                    "Branch not found in selected department",
+                )
+                branch_id = branch.id
+
+        await self._validate_unique_employee_id(data.employee_id)
+        self._validate_position_rule(data.user_level, data.position)
+
+        mu = ManageUser(
+            user_id=user.id,
+            role_id=role_id,
+            department_id=department_id,
+            branch_id=branch_id,
             user_level=data.user_level,
+            position=data.position,
             employee_id=data.employee_id,
             status=data.status,
         )
 
-        self.db.add(user)
+        self.db.add(mu)
         await self.db.commit()
-        await self.db.refresh(user)
-        return user
+        await self.db.refresh(mu)
 
-    # GET USER
-    async def get_user(self, user_id: UUID) -> User:
-        result = await self.db.execute(select(User).where(User.id == user_id))
-        user = result.scalars().first()
-        if not user:
-            raise AppException(ErrorCode.USER_NOT_FOUND, "User not found")
-        return user
+        return await self._to_response(mu)
 
-    # LIST USERS
-
-    async def list_users(self, skip: int = 0, limit: int = 20) -> List[User]:
-        result = await self.db.execute(
-            select(User).order_by(User.created_at.desc()).offset(skip).limit(limit)
+    # UPDATE
+    async def update(
+        self, id: UUID, data: ManageUserUpdateRequest
+    ) -> ManageUserResponse:
+        mu = await self._get_or_404(
+            ManageUser,
+            ManageUser.id == id,
+            ErrorCode.MANAGE_USER_NOT_FOUND,
+            "Manage user not found",
         )
-        return list(result.scalars().all())
 
-    # UPDATE USER
+        payload = data.model_dump(exclude_unset=True)
 
-    async def update_user(self, user_id: UUID, data: UserUpdateRequest) -> User:
-        user = await self.get_user(user_id)
+        if "role" in payload and not payload["role"]:
+            raise AppException(400, ErrorCode.INVALID_REQUEST, "Role is required")
 
-        if data.role:
-            role = await self._get_role_by_name(data.role)
-            user.role_id = role.id
+        if "department" in payload and not payload["department"]:
+            raise AppException(400, ErrorCode.INVALID_REQUEST, "Department is required")
 
-        if data.department is not None:
-            department = await self._get_department_by_name(data.department)
-            user.department_id = department.id if department else None
+        if "role" in payload:
+            role = await self._get_or_404(
+                Role,
+                Role.role_name == payload["role"],
+                ErrorCode.ROLE_NOT_FOUND,
+                "Role not found",
+            )
+            mu.role_id = role.id
 
-        if data.branch is not None:
-            branch = await self._get_branch_by_name(data.branch)
-            user.branch_id = branch.id if branch else None
+        if "department" in payload:
+            department = await self._get_or_404(
+                Department,
+                Department.name == payload["department"],
+                ErrorCode.DEPARTMENT_NOT_FOUND,
+                "Department not found",
+            )
+            mu.department_id = department.id
+            mu.branch_id = None
 
-        if data.user_level is not None:
-            user.user_level = data.user_level
+        if "branch" in payload:
+            if payload["branch"]:
+                branch = await self._get_or_404(
+                    Branch,
+                    (Branch.name == payload["branch"])
+                    & (Branch.department_id == mu.department_id),
+                    ErrorCode.BRANCH_NOT_FOUND,
+                    "Branch not found",
+                )
+                mu.branch_id = branch.id
+            else:
+                mu.branch_id = None
 
-        if data.employee_id is not None:
-            await self._check_unique_employee_id(data.employee_id, user.id)
-            user.employee_id = data.employee_id
+        if "employee_id" in payload:
+            await self._validate_unique_employee_id(
+                payload["employee_id"], exclude_id=id
+            )
 
-        if data.status is not None:
-            user.status = data.status
+        new_level = payload.get("user_level", mu.user_level)
+        new_position = payload.get("position", mu.position)
+        self._validate_position_rule(new_level, new_position)
+
+        for field in ["user_level", "position", "employee_id", "status"]:
+            if field in payload:
+                setattr(mu, field, payload[field])
 
         await self.db.commit()
-        await self.db.refresh(user)
-        return user
-
-    # DELETE USER
-    async def delete_user(self, user_id: UUID):
-        user = await self.get_user(user_id)
-        await self.db.delete(user)
-        await self.db.commit()
+        await self.db.refresh(mu)
+        return await self._to_response(mu)

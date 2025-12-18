@@ -1,9 +1,12 @@
+# AUTH
 from .auth_schema import (
     UserLoginRequest,
     UserLoginResponse,
     UserRegisterResponse,
     UserRegisterRequest,
 )
+
+# CONTACT
 from .contact_schema import (
     ContactCreate,
     ContactUpdate,
@@ -13,9 +16,13 @@ from .contact_schema import (
     NoteResponse,
     TaskCreate,
     TaskResponse,
-    ContactDeleteResponse
+    ContactDeleteResponse,
 )
+
+# ERROR
 from .error_schema import ErrorCode, ErrorResponse
+
+# LEAD
 from .lead_schema import (
     LeadResponse,
     LeadListResponse,
@@ -25,13 +32,17 @@ from .lead_schema import (
     LeadUpdateStatus,
     LeadDeleteResponse,
 )
+
+# MANAGE USER
 from .manage_user_schema import (
     ManageUserListResponse,
     ManageUserResponse,
     ManageUserCreateRequest,
     ManageUserUpdateRequest,
-    ManagerDropdown
+    UserLevel,
 )
+
+# PIPELINE
 from .pipeline_schema import (
     PipelineRequest,
     PipelineGetQuery,
@@ -40,6 +51,8 @@ from .pipeline_schema import (
     PipelineListResponse,
     PipelineAssignedUsers,
 )
+
+# PRODUCT
 from .product_schema import (
     ProductGetQuery,
     ProductResponse,
@@ -47,6 +60,8 @@ from .product_schema import (
     ProductListResponse,
     ProductDeleteResponse,
 )
+
+# QUOTATION
 from .quotation_schema import (
     QuotationItemRequest,
     QuotationRequest,
@@ -54,11 +69,32 @@ from .quotation_schema import (
     QuotationResponse,
     QuotationListResponse,
 )
+
+# RESPONSE
 from .response_schema import ResponseModel
+
+# USER
 from .user_schema import (
     UserCreateRequest,
     UserUpdateRequest,
     UserResponse,
     PaginatedUserResponse,
-    UserGetQuery
+    UserGetQuery,
+)
+
+# DEPARTMENT
+from .department_schema import (
+    DepartmentCreate,
+    DepartmentUpdate,
+    DepartmentRead,
+    DepartmentReadWithRelations,
+    BranchReadSimple,
+)
+
+# BRANCH
+from .branch_schema import (
+    BranchCreate,
+    BranchUpdate,
+    BranchRead,
+    BranchReadWithDepartment,
 )

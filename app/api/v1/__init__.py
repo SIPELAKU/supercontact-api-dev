@@ -9,7 +9,8 @@ from .endpoints import (
     userprofile_router,
     manage_users_router,
     roles_router,
-    permissions_router
+    permissions_router,
+    department_router,
 )
 
 from .router import api_router

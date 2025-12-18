@@ -3,8 +3,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core import verify_password, create_access_token
 from app.core.security import hash_password
 from app.exceptions import AppException
-from app.models import User
-from app.repositories import UserRepository, RoleRepository
+from app.models import User, UserStatus
+from app.repositories import UserRepository
 from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest
 from app.schemas.error_schema import ErrorCode
 
@@ -12,9 +12,9 @@ from app.schemas.error_schema import ErrorCode
 class AuthService:
     def __init__(self, db: AsyncSession):
         self.user_repo = UserRepository(db)
-        self.role_repo = RoleRepository(db)
         self.db = db
 
+    # TOKEN
     @staticmethod
     def create_token(user: User) -> str:
         return create_access_token(
@@ -34,21 +34,6 @@ class AuthService:
                 message="Email already registered",
             )
 
-        # ambil role
-        role = None
-        if payload.role_id:
-            role = await self.role_repo.get_by_id(payload.role_id)
-        elif payload.role_name:
-            role = await self.role_repo.get_by_name(payload.role_name)
-
-        if not role:
-            raise AppException(
-                status_code=400,
-                code=ErrorCode.ROLE_NOT_FOUND,
-                message="Role not found",
-            )
-
-        # generate avatar initial otomatis
         avatar_initial = self._generate_avatar_initial(payload.fullname)
 
         user = User(
@@ -58,32 +43,34 @@ class AuthService:
             company=payload.company,
             position=payload.position,
             password=hash_password(payload.password),
-            confirm_password=hash_password(payload.password),
             avatar_initial=avatar_initial,
-            role_id=role.id,
-            status=payload.status,
         )
 
         return await self.user_repo.create(user)
 
-    # =========================
-    # LOGIN
-    # =========================
+    # LOGIN (WAJIB ACTIVE)
     async def login(self, payload: UserLoginRequest):
         user = await self.user_repo.get_by_email(payload.email)
 
-        if not user:
+        if not user or not verify_password(payload.password, user.password):
             raise AppException(
                 status_code=401,
                 code=ErrorCode.AUTH_REQUIRED,
                 message="Invalid email or password",
             )
 
-        if not verify_password(payload.password, user.password):
+        if not user.manage_user:
             raise AppException(
-                status_code=401,
+                status_code=403,
                 code=ErrorCode.AUTH_REQUIRED,
-                message="Invalid email or password",
+                message="Account not activated yet",
+            )
+
+        if user.manage_user.status != UserStatus.ACTIVE:
+            raise AppException(
+                status_code=403,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Account is not active",
             )
 
         token = self.create_token(user)

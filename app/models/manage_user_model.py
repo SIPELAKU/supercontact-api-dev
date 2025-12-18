@@ -1,23 +1,19 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Enum as SAEnum,
-    Index,
-    String,
-    func,
-)
+from sqlalchemy import Column, DateTime, Enum as SAEnum, Index, String, func
 from sqlmodel import Field, Relationship, SQLModel
 
+if TYPE_CHECKING:
+    from app.models.user_model import User
+    from app.models.department_model import Department
+    from app.models.role_model import Role
+    from app.models.branch_model import Branch
 
-# ==================================================
-# ENUMS
-# ==================================================
+
 class UserStatus(StrEnum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
@@ -26,43 +22,81 @@ class UserStatus(StrEnum):
 
 class UserLevel(StrEnum):
     STAFF = "Staff"
+    SUPERVISOR = "Supervisor"
     MANAGER = "Manager"
 
 
-# MANAGE USER
+class Position(StrEnum):
+    SUPPORT_AGENT = "Support Agent"
+    FRONTEND_ENGINEER = "Frontend Engineer"
+    HR_GENERALIST = "HR Generalist"
+    CONTENT_SPECIALIST = "Content Specialist"
+    SALES_DEVELOPMENT = "Sales Development"
+
+
 class ManageUser(SQLModel, table=True):
     __tablename__ = "manage_users"
     model_config = ConfigDict(from_attributes=True)
 
-    # PRIMARY KEY
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     user_id: UUID = Field(foreign_key="users.id", nullable=False)
-    department_id: UUID = Field(foreign_key="departments.id", nullable=False)
-    role_id: UUID = Field(foreign_key="roles.id", nullable=False)
+
+    department_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="departments.id",
+        nullable=True,
+    )
+
+    branch_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="branches.id",
+        nullable=True,
+    )
+
+    role_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="roles.id",
+        nullable=True,
+    )
+
     user_level: UserLevel = Field(
         sa_column=Column(
             SAEnum(
                 UserLevel,
-                values_callable=lambda e: [item.value for item in e],
+                values_callable=lambda e: [i.value for i in e],
                 name="user_level_enum",
                 native_enum=False,
             ),
             nullable=False,
             server_default=UserLevel.STAFF,
+        )
+    )
+
+    position: Optional[Position] = Field(
+        default=None,
+        sa_column=Column(
+            SAEnum(
+                Position,
+                values_callable=lambda e: [i.value for i in e],
+                name="user_position_enum",
+                native_enum=False,
+            ),
+            nullable=True,
         ),
     )
+
     status: UserStatus = Field(
         sa_column=Column(
             SAEnum(
                 UserStatus,
-                values_callable=lambda e: [item.value for item in e],
+                values_callable=lambda e: [i.value for i in e],
                 name="user_status_enum",
                 native_enum=False,
             ),
             nullable=False,
             server_default=UserStatus.PENDING,
-        ),
+        )
     )
 
     employee_id: Optional[str] = Field(
@@ -73,6 +107,7 @@ class ManageUser(SQLModel, table=True):
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
+
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -81,18 +116,13 @@ class ManageUser(SQLModel, table=True):
         )
     )
 
-    # RELATIONSHIP
-    role: "Role" = Relationship(back_populates="manage_users")
-    department: "Department" = Relationship(back_populates="user_departments")
     user: "User" = Relationship(back_populates="manage_user")
-
-    def is_active(self) -> bool:
-        return self.status == UserStatus.ACTIVE
-
-    def is_manager(self) -> bool:
-        return self.user_level == UserLevel.MANAGER
+    department: Optional["Department"] = Relationship(back_populates="manage_users")
+    branch: Optional["Branch"] = Relationship(back_populates="manage_users")
+    role: Optional["Role"] = Relationship(back_populates="manage_users")
 
     __table_args__ = (
         Index("idx_manage_user_user_id", "user_id"),
-        Index("idx_manage_user_department", "department_id"),
+        Index("idx_manage_user_department_id", "department_id"),
+        Index("idx_manage_user_branch_id", "branch_id"),
     )

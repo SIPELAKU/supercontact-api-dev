@@ -14,52 +14,55 @@ class UserStatus(StrEnum):
 
 class UserLevel(StrEnum):
     STAFF = "Staff"
+    SUPERVISOR = "Supervisor"
     MANAGER = "Manager"
 
 
-# REQUEST SCHEMAS
+class Position(StrEnum):
+    SUPPORT_AGENT = "Support Agent"
+    FRONTEND_ENGINEER = "Frontend Engineer"
+    HR_GENERALIST = "HR Generalist"
+    CONTENT_SPECIALIST = "Content Specialist"
+    SALES_DEVELOPMENT = "Sales Development"
 
 
 class ManageUserCreateRequest(BaseModel):
     email: EmailStr
 
-    role_id: UUID
-    department_id: Optional[UUID] = None
-    branch_id: Optional[UUID] = None
+    role: Optional[str] = None
+    department: Optional[str] = None
+    branch: Optional[str] = None
 
     user_level: UserLevel = UserLevel.STAFF
+    position: Optional[Position] = None
     employee_id: Optional[str] = None
     status: UserStatus = UserStatus.PENDING
 
 
-# Update Manage User
-
-
 class ManageUserUpdateRequest(BaseModel):
-    role_id: Optional[UUID] = None
-    department_id: Optional[UUID] = None
-    branch_id: Optional[UUID] = None
+    role: Optional[str] = None
+    department: Optional[str] = None
+    branch: Optional[str] = None
 
     user_level: Optional[UserLevel] = None
+    position: Optional[Position] = None
     employee_id: Optional[str] = None
     status: Optional[UserStatus] = None
 
 
-# RESPONSE SCHEMAS
-
-
 class ManageUserResponse(BaseModel):
     id: UUID
-    user_id: str
+    user_id: UUID
 
     fullname: str
     email: EmailStr
 
-    role_id: UUID
-    department_id: Optional[UUID]
-    branch_id: Optional[UUID]
+    role: Optional[str]
+    department: Optional[str]
+    branch: Optional[str]
 
     user_level: UserLevel
+    position: Optional[Position]
     employee_id: Optional[str]
     status: UserStatus
 
@@ -72,13 +75,3 @@ class ManageUserResponse(BaseModel):
 class ManageUserListResponse(BaseModel):
     total: int
     items: List[ManageUserResponse]
-
-
-# DROPDOWN / HELPER SCHEMAS
-
-
-class ManagerDropdown(BaseModel):
-    id: UUID
-    fullname: str
-
-    model_config = ConfigDict(from_attributes=True)

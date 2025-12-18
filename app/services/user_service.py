@@ -7,8 +7,12 @@ from app.core import hash_password, verify_password
 from app.exceptions import AppException
 from app.models import User, UserStatus
 from app.repositories import UserRepository
-from app.schemas import UserCreateRequest, UserUpdateRequest
-from app.schemas import UserGetQuery, ErrorCode
+from app.schemas import (
+    UserCreateRequest,
+    UserUpdateRequest,
+    UserGetQuery,
+    ErrorCode,
+)
 
 
 class UserService:
@@ -26,22 +30,35 @@ class UserService:
                 message="Invalid email or password",
             )
 
+        if not user.manage_user:
+            raise AppException(
+                code=ErrorCode.AUTH_REQUIRED,
+                status_code=403,
+                message="Account not activated yet",
+            )
+
+        if user.manage_user.status != UserStatus.ACTIVE:
+            raise AppException(
+                code=ErrorCode.AUTH_REQUIRED,
+                status_code=403,
+                message="Account is not active",
+            )
+
         return user
 
-    async def find_by_id(self, user_id: UUID):
+    async def find_by_id(self, user_id: UUID) -> User:
         user = await self.repo.get_by_id(user_id)
         if not user:
             raise AppException(
-                code=ErrorCode.NOT_FOUND, status_code=404, message="User not found"
+                code=ErrorCode.NOT_FOUND,
+                status_code=404,
+                message="User not found",
             )
         return user
 
-    async def find_all_users(
-            self,
-            query_params: UserGetQuery,
-    ):
-
-        users, total = await self.repo.list_users(query_params=query_params)
+    # LIST
+    async def find_all_users(self, query_params: UserGetQuery):
+        users, total = await self.repo.list_users(query_params)
 
         return {
             "users": users,
@@ -51,33 +68,37 @@ class UserService:
             "total_pages": (total + query_params.limit - 1) // query_params.limit,
         }
 
-    async def create(self, req: UserCreateRequest):
-        existing = await self.repo.get_by_email(req.email)
-        if existing:
+    # CREATE
+    async def create(self, req: UserCreateRequest) -> User:
+        if await self.repo.get_by_email(req.email):
             raise AppException(
                 status_code=400,
                 code=ErrorCode.VALIDATION_ERROR,
                 message="Email already registered",
             )
 
-        avatar = req.fullname[:2].upper() if req.fullname else None
+        avatar_initial = req.fullname[:2].upper()
 
         user = User(
             fullname=req.fullname,
             email=req.email,
+            phone=req.phone,
+            company=req.company,
+            position=req.position,
             password=hash_password(req.password),
-            avatar_initial=avatar,
-            role=None,
-            status=req.status or UserStatus.ACTIVE,
+            avatar_initial=avatar_initial,
         )
 
         return await self.repo.create(user)
 
-    async def update(self, user_id: UUID, req: UserUpdateRequest):
+    # UPDATE
+    async def update(self, user_id: UUID, req: UserUpdateRequest) -> User:
         user = await self.repo.get_by_id(user_id)
         if not user:
             raise AppException(
-                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="User not found",
             )
 
         if req.email and req.email != user.email:
@@ -93,22 +114,28 @@ class UserService:
             user.fullname = req.fullname
             user.avatar_initial = req.fullname[:2].upper()
 
+        if req.phone:
+            user.phone = req.phone
+
+        if req.company:
+            user.company = req.company
+
+        if req.position:
+            user.position = req.position
+
         if req.password:
             user.password = hash_password(req.password)
 
-        if req.role:
-            user.role = req.role
-
-        if req.status:
-            user.status = req.status
-
         return await self.repo.update(user)
 
+    # DELETE
     async def delete(self, user_id: UUID):
         user = await self.repo.get_by_id(user_id)
         if not user:
             raise AppException(
-                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+                status_code=404,
+                code=ErrorCode.NOT_FOUND,
+                message="User not found",
             )
 
         await self.repo.delete(user)

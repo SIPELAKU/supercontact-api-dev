@@ -1,54 +1,87 @@
 import asyncio
-
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from app.core import hash_password
+from app.core.security import hash_password
 from app.db import get_async_session
-from app.models import UserStatus, UserRole, User, UserPosition
+from app.models import User, UserPosition
+
+
+USERS = [
+    {
+        "fullname": "Super Admin",
+        "email": "superadmin@company.com",
+        "password": "superadmin",
+        "avatar_initial": "SA",
+        "phone": "0800000000",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Admin",
+        "email": "admin@company.com",
+        "password": "admin",
+        "avatar_initial": "AD",
+        "phone": "0811111111",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Manager",
+        "email": "manager@company.com",
+        "password": "manager",
+        "avatar_initial": "MG",
+        "phone": "0822222222",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Staff",
+        "email": "staff@company.com",
+        "password": "staff",
+        "avatar_initial": "ST",
+        "phone": "0833333333",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+]
 
 
 async def seed_users():
     db_gen = get_async_session()
     db = await anext(db_gen)
-    query = await db.scalars(select(UserRole))
-    roles = query.all()
-    user_seed = [
-        {"fullname": "admin", "email": "admin@example.com", "password": hash_password("admin"), "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER},
-        {"fullname": "admin2", "email": "admin2@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER},
-        {"fullname": "admin3", "email": "admin3@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER},
-        {"fullname": "admin4", "email": "admin4@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER},
-        {"fullname": "admin5", "email": "admin5@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER},
-    ]
-
-    for user in user_seed:
-        db_user = User(**user)
-        db.add(db_user)
 
     try:
+        for data in USERS:
+            result = await db.execute(select(User).where(User.email == data["email"]))
+            existing_user = result.scalar_one_or_none()
+
+            if existing_user:
+                print(f"⚠️ User already exists: {data['email']}")
+                continue
+
+            user = User(
+                fullname=data["fullname"],
+                email=data["email"],
+                password=hash_password(data["password"]),
+                avatar_initial=data["avatar_initial"],
+                phone=data["phone"],
+                company=data["company"],
+                position=data["position"],
+            )
+
+            db.add(user)
+            print(f"User created: {data['email']}")
+
         await db.commit()
-    except IntegrityError:
-        print("Rollback")
+        print("User seeding completed")
+
+    except Exception as e:
         await db.rollback()
+        print("Rollback:", e)
+
     finally:
         await db.close()
 
 
 if __name__ == "__main__":
-    print("Running database seed...")
     asyncio.run(seed_users())
-    print("Seed completed!")

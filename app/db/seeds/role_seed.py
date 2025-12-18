@@ -8,9 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models.role_model import Role
 
 
-DATABASE_URL = (
-    "postgresql+asyncpg://postgres:codedavid18@localhost:5433/user_management"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -52,7 +50,7 @@ async def main():
     async with async_session() as session:
         await seed_roles(session)
 
-    print("✅ Seed roles selesai")
+    print("Seed roles selesai")
 
 
 if __name__ == "__main__":

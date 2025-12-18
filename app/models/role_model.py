@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID, uuid4
-
 from pydantic import ConfigDict
+from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, String, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlmodel import SQLModel, Field, Relationship
 
 
 def utc_now():

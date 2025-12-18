@@ -1,157 +1,91 @@
 import asyncio
 from uuid import uuid4
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
-from app.models.user_model import User, UserStatus, UserLevel
+from app.models.user_model import User
+from app.models.manage_user_model import ManageUser, UserLevel, UserStatus, Position
 from app.models.role_model import Role
 from app.models.department_model import Department
-from app.models.branch_model import Branch
-from app.utils.hashing import Hasher
 
-
-DATABASE_URL = (
-    "postgresql+asyncpg://postgres:codedavid18@localhost:5433/user_management"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
-async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-async def seed_roles(session: AsyncSession):
-    role_names = ["SuperAdmin", "Admin", "Manager", "Staff"]
-    roles = {}
+async def seed_manage_users(session: AsyncSession):
+    MANAGE_USER_MAP = {
+        "superadmin@company.com": {
+            "role": "SuperAdmin",
+            "user_level": UserLevel.MANAGER,
+            "position": None,
+        },
+        "admin@company.com": {
+            "role": "Admin",
+            "user_level": UserLevel.MANAGER,
+            "position": Position.HR_GENERALIST,
+        },
+        "manager@company.com": {
+            "role": "Manager",
+            "user_level": UserLevel.MANAGER,
+            "position": Position.FRONTEND_ENGINEER,
+        },
+        "staff@company.com": {
+            "role": "Staff",
+            "user_level": UserLevel.STAFF,
+            "position": Position.SUPPORT_AGENT,
+        },
+    }
 
-    for name in role_names:
-        result = await session.execute(select(Role).where(Role.role_name == name))
-        role = result.scalar_one_or_none()
-
-        if not role:
-            role = Role(id=uuid4(), role_name=name)
-            session.add(role)
-
-        roles[name] = role
-
-    await session.commit()
-    return roles
-
-
-async def seed_department(session: AsyncSession):
-    result = await session.execute(
+    dept_result = await session.execute(
         select(Department).where(Department.name == "Engineering")
     )
-    dept = result.scalar_one_or_none()
+    department = dept_result.scalar_one()
 
-    if not dept:
-        dept = Department(id=uuid4(), name="Engineering")
-        session.add(dept)
-        await session.commit()
+    for email, config in MANAGE_USER_MAP.items():
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
 
-    return dept
-
-
-async def seed_branch(session: AsyncSession, department_id):
-    result = await session.execute(
-        select(Branch).where(
-            Branch.name == "Backend",
-            Branch.department_id == department_id,
-        )
-    )
-    branch = result.scalar_one_or_none()
-
-    if not branch:
-        branch = Branch(
-            id=uuid4(),
-            name="Backend",
-            department_id=department_id,
-        )
-        session.add(branch)
-        await session.commit()
-
-    return branch
-
-
-async def seed_users(
-    session: AsyncSession,
-    roles: dict,
-    department: Department,
-    branch: Branch,
-):
-    users = [
-        # Super Admin
-        dict(
-            fullname="Super Admin",
-            email="superadmin@company.com",
-            role=roles["SuperAdmin"],
-            user_level=UserLevel.MANAGER,
-            department_id=None,
-            branch_id=None,
-        ),
-        # Admin
-        dict(
-            fullname="Admin System",
-            email="admin@company.com",
-            role=roles["Admin"],
-            user_level=UserLevel.MANAGER,
-            department_id=department.id,
-            branch_id=None,
-        ),
-        # Manager
-        dict(
-            fullname="John Manager",
-            email="manager@company.com",
-            role=roles["Manager"],
-            user_level=UserLevel.MANAGER,
-            department_id=department.id,
-            branch_id=None,
-        ),
-        # Staff
-        dict(
-            fullname="Alice Staff",
-            email="staff@company.com",
-            role=roles["Staff"],
-            user_level=UserLevel.STAFF,
-            department_id=department.id,
-            branch_id=branch.id,
-        ),
-    ]
-
-    for data in users:
-        result = await session.execute(select(User).where(User.email == data["email"]))
-        exists = result.scalar_one_or_none()
-
-        if exists:
+        if not user:
+            print(f"⚠️ User not found: {email}")
             continue
 
-        user = User(
-            id=uuid4(),
-            fullname=data["fullname"],
-            email=data["email"],
-            password=Hasher.hash_password("password"),
-            role_id=data["role"].id,
-            department_id=data["department_id"],
-            branch_id=data["branch_id"],
-            user_level=data["user_level"],
-            status=UserStatus.ACTIVE,
+        result = await session.execute(
+            select(ManageUser).where(ManageUser.user_id == user.id)
         )
-        session.add(user)
+        if result.scalar_one_or_none():
+            print(f"⚠️ ManageUser already exists: {email}")
+            continue
+
+        result = await session.execute(
+            select(Role).where(Role.role_name == config["role"])
+        )
+        role = result.scalar_one()
+
+        manage_user = ManageUser(
+            id=uuid4(),
+            user_id=user.id,
+            department_id=department.id,
+            role_id=role.id,
+            user_level=config["user_level"],
+            status=UserStatus.ACTIVE,
+            position=config["position"],
+        )
+
+        session.add(manage_user)
+        print(f"✅ ManageUser created for {email}")
 
     await session.commit()
 
 
 async def main():
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSessionLocal() as session:
+        await seed_manage_users(session)
 
-    async with async_session() as session:
-        roles = await seed_roles(session)
-        department = await seed_department(session)
-        branch = await seed_branch(session, department.id)
-        await seed_users(session, roles, department, branch)
-
-    print("✅ Seeding selesai")
+    print("ManageUser seeding completed")
 
 
 if __name__ == "__main__":

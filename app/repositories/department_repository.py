@@ -3,12 +3,12 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import selectinload
+from fastapi import status
 
-from app.models.department_model import Department, DepartmentName
+from app.models.department_model import Department
 from app.models.branch_model import Branch
-from app.models.user_model import User
 from app.exceptions import AppException
 from app.schemas.error_schema import ErrorCode
 
@@ -18,62 +18,60 @@ class DepartmentRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def _get_user(self, user_id: UUID) -> User:
-        user = await self.db.get(User, user_id)
-        if not user:
-            raise AppException(ErrorCode.DATA_NOT_FOUND, "User not found")
-        return user
-
+    # CREATE
     async def create_with_branches(
         self,
-        name: DepartmentName,
+        name: str,
         branch_names: List[str],
-        manager_id: Optional[UUID] = None,
     ) -> Department:
-
-        exists = await self.db.scalar(select(Department).where(Department.name == name))
-        if exists:
-            raise AppException(
-                ErrorCode.ITEM_ALREADY_EXISTS, "Department name already exists"
-            )
 
         if len(branch_names) != len(set(branch_names)):
             raise AppException(
-                ErrorCode.VALIDATION_ERROR, "Duplicate branch names are not allowed"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Duplicate branch names are not allowed",
             )
 
-        # Validate manager
-        if manager_id:
-            await self._get_user(manager_id)
-
-            used = await self.db.scalar(
-                select(Department).where(Department.manager_id == manager_id)
-            )
-            if used:
-                raise AppException(
-                    ErrorCode.BAD_REQUEST,
-                    "This user already manages another department",
-                )
-
-        dept = Department(name=name, manager_id=manager_id)
+        dept = Department(name=name)
 
         try:
             self.db.add(dept)
             await self.db.flush()
 
-            # Create branches
-            for bname in branch_names:
-                self.db.add(Branch(name=bname, department_id=dept.id))
+            for branch_name in branch_names:
+                self.db.add(
+                    Branch(
+                        name=branch_name,
+                        department_id=dept.id,
+                    )
+                )
 
             await self.db.commit()
-            await self.db.refresh(dept)
 
-            return dept
+            result = await self.db.execute(
+                select(Department)
+                .where(Department.id == dept.id)
+                .options(selectinload(Department.branches))
+            )
+            return result.scalar_one()
+
+        except IntegrityError:
+            await self.db.rollback()
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code=ErrorCode.ITEM_ALREADY_EXISTS,
+                message="Department already exists",
+            )
 
         except SQLAlchemyError as e:
             await self.db.rollback()
-            raise AppException(ErrorCode.DB_ERROR, str(e))
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code=ErrorCode.DB_ERROR,
+                message=str(e),
+            )
 
+    # READ
     async def get_all(self) -> List[Department]:
         result = await self.db.execute(
             select(Department).options(selectinload(Department.branches))
@@ -81,61 +79,80 @@ class DepartmentRepository:
         return result.scalars().all()
 
     async def get_by_id(self, department_id: UUID) -> Department:
-        dept = await self.db.get(Department, department_id)
+        result = await self.db.execute(
+            select(Department)
+            .where(Department.id == department_id)
+            .options(selectinload(Department.branches))
+        )
+        dept = result.scalar_one_or_none()
+
         if not dept:
-            raise AppException(ErrorCode.DATA_NOT_FOUND, "Department not found")
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code=ErrorCode.DATA_NOT_FOUND,
+                message="Department not found",
+            )
+
         return dept
 
+    # UPDATE
     async def update(
         self,
         department_id: UUID,
-        name: Optional[DepartmentName] = None,
-        manager_id: Optional[UUID] = None,
+        name: Optional[str] = None,
         new_branches: Optional[List[str]] = None,
     ) -> Department:
 
         dept = await self.get_by_id(department_id)
 
-        # Update department name
-        if name and name != dept.name:
-            exists = await self.db.scalar(
-                select(Department).where(Department.name == name)
+        try:
+            if name:
+                dept.name = name
+
+            if new_branches:
+                existing = {b.name for b in dept.branches}
+
+                for branch_name in new_branches:
+                    if branch_name in existing:
+                        raise AppException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            code=ErrorCode.VALIDATION_ERROR,
+                            message=f"Branch '{branch_name}' already exists",
+                        )
+
+                    self.db.add(
+                        Branch(
+                            name=branch_name,
+                            department_id=dept.id,
+                        )
+                    )
+
+            await self.db.commit()
+
+            result = await self.db.execute(
+                select(Department)
+                .where(Department.id == dept.id)
+                .options(selectinload(Department.branches))
             )
-            if exists:
-                raise AppException(
-                    ErrorCode.ITEM_ALREADY_EXISTS, "Department name already exists"
-                )
-            dept.name = name
+            return result.scalar_one()
 
-        if manager_id is not None:
-            if manager_id:
-                await self._get_user(manager_id)
-                used = await self.db.scalar(
-                    select(Department).where(Department.manager_id == manager_id)
-                )
-                if used:
-                    raise AppException(
-                        ErrorCode.BAD_REQUEST,
-                        "Manager already leads another department",
-                    )
-                dept.manager_id = manager_id
-            else:
-                dept.manager_id = None
+        except IntegrityError:
+            await self.db.rollback()
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code=ErrorCode.ITEM_ALREADY_EXISTS,
+                message="Duplicate data detected",
+            )
 
-        if new_branches:
-            existing = {b.name for b in dept.branches}
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code=ErrorCode.DB_ERROR,
+                message=str(e),
+            )
 
-            for bname in new_branches:
-                if bname in existing:
-                    raise AppException(
-                        ErrorCode.VALIDATION_ERROR, f"Branch '{bname}' already exists"
-                    )
-                self.db.add(Branch(name=bname, department_id=dept.id))
-
-        await self.db.commit()
-        await self.db.refresh(dept)
-        return dept
-
+    # DELETE
     async def delete(self, department_id: UUID) -> bool:
         dept = await self.get_by_id(department_id)
         await self.db.delete(dept)

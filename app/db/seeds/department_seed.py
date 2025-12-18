@@ -8,9 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models.department_model import Department
 
 
-DATABASE_URL = (
-    "postgresql+asyncpg://postgres:codedavid18@localhost:5433/user_management"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -54,7 +52,7 @@ async def main():
     async with async_session() as session:
         await seed_departments(session)
 
-    print("✅ Department seeding selesai!")
+    print("Department seeding selesai!")
 
 
 if __name__ == "__main__":

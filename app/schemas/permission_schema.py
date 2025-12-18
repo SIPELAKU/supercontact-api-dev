@@ -4,21 +4,12 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# ============================
-# BASE
-# ============================
-
-
 class PermissionBase(BaseModel):
     permission_name: str
     model_config = ConfigDict(from_attributes=True)
 
 
-# ============================
 # CREATE
-# ============================
-
-
 class PermissionCreate(PermissionBase):
     role_names: Optional[List[str]] = Field(
         default=None,
@@ -27,11 +18,7 @@ class PermissionCreate(PermissionBase):
     )
 
 
-# ============================
-# UPDATE (🔥 SAME AS CREATE)
-# ============================
-
-
+# UPDATE
 class PermissionUpdate(BaseModel):
     permission_name: Optional[str] = None
     role_names: Optional[List[str]] = Field(
@@ -41,22 +28,13 @@ class PermissionUpdate(BaseModel):
     )
 
 
-# ============================
-# ASSIGN (OPTIONAL ENDPOINTS)
-# ============================
-
-
+# ASSIGN
 class PermissionAssignRoles(BaseModel):
     role_ids: List[UUID]
 
 
 class PermissionAssignRolesByName(BaseModel):
     role_names: List[str]
-
-
-# ============================
-# RESPONSE
-# ============================
 
 
 class RoleMini(BaseModel):

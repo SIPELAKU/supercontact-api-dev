@@ -25,8 +25,8 @@ def get_service(db: AsyncSession = Depends(get_async_session)):
     # dependencies=[Depends(require_permissions("permission:create"))],
 )
 async def create_permission(
-        data: PermissionCreate,
-        service: PermissionService = Depends(get_service),
+    data: PermissionCreate,
+    service: PermissionService = Depends(get_service),
 ):
     return await service.create_permission(data.permission_name)
 
@@ -37,8 +37,8 @@ async def create_permission(
     # dependencies=[Depends(require_permissions("permission:read"))],
 )
 async def get_permission(
-        permission_id: UUID,
-        service: PermissionService = Depends(get_service),
+    permission_id: UUID,
+    service: PermissionService = Depends(get_service),
 ):
     return await service.repo.get_permission_by_id(permission_id)
 
@@ -48,9 +48,9 @@ async def get_permission(
     # dependencies=[Depends(require_permissions("permission:assign-roles"))],
 )
 async def assign_roles(
-        permission_id: UUID,
-        data: PermissionAssignRoles,
-        service: PermissionService = Depends(get_service),
+    permission_id: UUID,
+    data: PermissionAssignRoles,
+    service: PermissionService = Depends(get_service),
 ):
     await service.assign_roles(permission_id, data.role_ids)
     return {"message": "Roles assigned to permission"}
@@ -61,9 +61,9 @@ async def assign_roles(
     # dependencies=[Depends(require_permissions("permission:remove-role"))],
 )
 async def remove_role(
-        permission_id: UUID,
-        role_id: UUID,
-        service: PermissionService = Depends(get_service),
+    permission_id: UUID,
+    role_id: UUID,
+    service: PermissionService = Depends(get_service),
 ):
     await service.remove_role(permission_id, role_id)
     return {"message": "Role removed from permission"}
