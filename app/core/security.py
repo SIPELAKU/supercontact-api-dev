@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from fastapi import Depends
@@ -14,9 +15,22 @@ from app.models.user_model import User
 from app.schemas import ErrorCode
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-bearer_scheme = HTTPBearer(auto_error=False)
+access_token_scheme = HTTPBearer(
+    scheme_name="AccessToken",
+    auto_error=False
+)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+reset_token_scheme = HTTPBearer(
+    scheme_name="ResetPasswordToken",
+    auto_error=False
+)
+
+TOKEN_EXPIRE_MINUTES = 60
+
+
+class TokenType(StrEnum):
+    ACCESS_TOKEN = "access_token"
+    RESET_PASSWORD = "reset_password"
 
 
 def hash_password(password: str) -> str:
@@ -33,20 +47,25 @@ async def get_db_session():
         yield session
 
 
-def create_access_token(data: dict, expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES):
+def create_token(data: dict, token_type: TokenType, expire_minutes: int = TOKEN_EXPIRE_MINUTES):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     to_encode.update({"exp": expire})
 
+    token_key = settings.SECRET_KEY
+
+    if token_type == token_type.RESET_PASSWORD:
+        token_key = settings.RESET_PASSWORD_KEY
+
     return jwt.encode(
         to_encode,
-        settings.SECRET_KEY,
+        token_key,
         algorithm=settings.ALGORITHM,
     )
 
 
 async def auth_require(
-        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+        credentials: HTTPAuthorizationCredentials = Depends(access_token_scheme),
         db: AsyncSession = Depends(get_db_session),
 ):
     if not credentials:
@@ -114,3 +133,53 @@ def check_roles(*allowed_roles: UserRole):
         return user
 
     return depends_auth
+
+
+async def reset_token(
+        credentials: HTTPAuthorizationCredentials = Depends(reset_token_scheme),
+        db: AsyncSession = Depends(get_db_session),
+):
+    if not credentials:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Reset token is required",
+        )
+
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(
+            token,
+            settings.RESET_PASSWORD_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Invalid token payload",
+            )
+
+        user = await db.get(User, UUID(user_id))
+        if not user:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="User not found",
+            )
+        return UUID(user_id)
+
+    except ExpiredSignatureError:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Reset token has expired",
+        )
+    except JWTError:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Invalid reset token",
+        )

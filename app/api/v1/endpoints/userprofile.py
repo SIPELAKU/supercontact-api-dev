@@ -4,9 +4,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.security import auth_require
 from app.db.session import get_async_session
 from app.repositories.userprofile_repository import UserProfileRepository
-from app.schemas import ResponseModel
-from app.schemas.userprofile_schema import UserProfileResponse, UserProfileSchema
-from app.services.userprofile_service import UserProfileService
+from app.schemas import ResponseModel, UserProfileResponse, UserProfileSchema
+from app.services import UserProfileService
 
 router = APIRouter(prefix="/user-profile", tags=["User Profile"])
 
@@ -16,8 +15,8 @@ service = UserProfileService(repo)
 
 @router.get("/profile", response_model=ResponseModel[UserProfileResponse])
 async def get_profile(
-    db: AsyncSession = Depends(get_async_session),
-    current_user=Depends(auth_require),
+        db: AsyncSession = Depends(get_async_session),
+        current_user=Depends(auth_require),
 ):
     profile = await service.get_profile(db, current_user.id)
     if not profile:
@@ -30,9 +29,9 @@ async def get_profile(
 
 @router.patch("/profile", response_model=ResponseModel[UserProfileResponse])
 async def update_profile(
-    payload: UserProfileSchema,
-    db: AsyncSession = Depends(get_async_session),
-    current_user=Depends(auth_require),
+        payload: UserProfileSchema,
+        db: AsyncSession = Depends(get_async_session),
+        current_user=Depends(auth_require),
 ):
     profile = await service.update_profile(
         db,
@@ -47,4 +46,3 @@ async def update_profile(
         )
 
     return ResponseModel(data=profile)
-

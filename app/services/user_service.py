@@ -30,11 +30,7 @@ class UserService:
             raise AppException(code=ErrorCode.NOT_FOUND, status_code=404, message="User not found")
         return user
 
-    async def find_all_users(
-            self,
-            query_params: UserGetQuery,
-    ):
-
+    async def find_all_users(self, query_params: UserGetQuery):
         users, total = await self.repo.list_users(query_params=query_params)
 
         return {

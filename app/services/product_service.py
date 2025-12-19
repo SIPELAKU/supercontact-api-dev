@@ -30,11 +30,7 @@ class ProductService:
     # GET ALL PRODUCTS
     async def find_all_products(self, query_params: ProductGetQuery):
         products, total = await self.repo.get_all(query_params=query_params)
-        if not total or not query_params.limit:
-            total_pages = 1
-            query_params.page = 1
-        else:
-            total_pages = ceil(total / query_params.limit)
+        total_pages = ceil(total / query_params.limit)
 
         return {
             "total": total,

@@ -9,7 +9,7 @@ from app.repositories.contact_repository import ContactRepository
 from app.schemas import ContactGetQuery
 from app.schemas.contact_schema import (
     ContactCreate, ContactUpdate,
-    NoteCreate, TaskCreate
+    ContactNoteCreate, ContactTaskCreate
 )
 
 
@@ -63,7 +63,7 @@ class ContactService:
             )
         return await self.repo.delete(contact)
 
-    async def create_note(self, user_id: UUID, contact_id: UUID, data: NoteCreate):
+    async def create_note(self, user_id: UUID, contact_id: UUID, data: ContactNoteCreate):
         contact = await self.repo.get_by_id(contact_id=contact_id)
         if not contact:
             raise AppException(
@@ -83,7 +83,7 @@ class ContactService:
             )
         return await self.repo.get_notes(contact_id)
 
-    async def create_task(self, contact_id: UUID, data: TaskCreate):
+    async def create_task(self, contact_id: UUID, data: ContactTaskCreate):
         task = await self.repo.get_by_id(contact_id=contact_id)
         if not task:
             raise AppException(

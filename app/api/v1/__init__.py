@@ -9,6 +9,7 @@ from .endpoints import (
     userprofile_router,
     mailings_router,
     userdevice_router,
+    notes_router,
 )
 
 from .router import api_router

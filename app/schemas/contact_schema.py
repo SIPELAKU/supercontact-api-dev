@@ -73,11 +73,11 @@ class ContactDeleteResponse(SQLModel):
     deleted: bool
 
 
-class NoteCreate(SQLModel):
+class ContactNoteCreate(SQLModel):
     note: str
 
 
-class NoteResponse(SQLModel):
+class ContactNoteResponse(SQLModel):
     id: UUID
     contact_id: UUID
     user_id: UUID
@@ -90,14 +90,14 @@ class NoteResponse(SQLModel):
         from_attributes = True
 
 
-class TaskCreate(SQLModel):
+class ContactTaskCreate(SQLModel):
     task_name: str
     task_date: datetime
     priority: str
     assign_to: UUID
 
 
-class TaskResponse(SQLModel):
+class ContactTaskResponse(SQLModel):
     id: UUID
     contact_id: UUID
     task_name: str
