@@ -72,3 +72,10 @@ from .user_schema import (
     UserResponse,
     UserGetQuery
 )
+from .note_schema import (
+    NoteCreate,
+    NoteUpdate,
+    PaginatedNote,
+    NoteResponse,
+    NoteGetQuery
+)
