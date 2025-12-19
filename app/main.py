@@ -1,8 +1,12 @@
 from fastapi import FastAPI, Request, Depends
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import (
+    RequestValidationError,
+    HTTPException as FastAPIHTTPException,
+)
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_v1_router
 from app.core import settings
@@ -25,29 +29,25 @@ app.add_middleware(
 
 @app.get("/", tags=["Root"])
 def root():
-    return {"success": True, "data": {"message": "Server is running!"}, "errors": None}
+    return {
+        "success": True,
+        "data": {"message": "Server is running!"},
+        "errors": None,
+    }
 
 
 @app.get("/health", tags=["Health"])
 async def health(db=Depends(get_async_session)):
     try:
         await db.exec(text("SELECT 1"))
-        return {
-            "status": "ok",
-            "database": "connected"
-        }
+        return {"status": "ok", "database": "connected"}
     except Exception:
-        return {
-            "status": "error",
-            "database": "disconnected"
-        }
+        return {"status": "error", "database": "disconnected"}
 
 
-# ERROR HANDLER FOR AppException (404, 403, dll)
 app.add_exception_handler(AppException, app_exception_handler)
 
 
-# ERROR HANDLER FOR VALIDATION ERROR
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -63,15 +63,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# ERROR HANDLER FOR
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, (FastAPIHTTPException, StarletteHTTPException)):
+        raise exc
+
     return JSONResponse(
         status_code=500,
         content=ResponseModel(
             success=False,
             error=ErrorResponse(
-                code=ErrorCode.SERVER_ERROR, message=str(exc), details={}
+                code=ErrorCode.SERVER_ERROR,
+                message="Internal Server Error",
+                details={},
             ),
         ).model_dump(),
     )

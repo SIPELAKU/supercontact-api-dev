@@ -1,6 +1,7 @@
-from typing import List, Optional
 from uuid import UUID
+from typing import List, Optional
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -28,15 +29,6 @@ class PermissionUpdate(BaseModel):
     )
 
 
-# ASSIGN
-class PermissionAssignRoles(BaseModel):
-    role_ids: List[UUID]
-
-
-class PermissionAssignRolesByName(BaseModel):
-    role_names: List[str]
-
-
 class RoleMini(BaseModel):
     id: UUID
     role_name: str
@@ -52,3 +44,10 @@ class PermissionRead(PermissionBase):
 
 class PermissionReadWithRoles(PermissionRead):
     roles: List[RoleMini]
+
+
+class PaginatedPermission(BaseModel):
+    items: List[PermissionReadWithRoles]
+    total: int
+    page: int
+    size: int

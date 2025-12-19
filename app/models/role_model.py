@@ -70,7 +70,9 @@ class Permission(SQLModel, table=True):
     id: UUID = Field(
         default_factory=uuid4, sa_column=Column(PG_UUID(as_uuid=True), primary_key=True)
     )
-    permission_name: str = Field(sa_column=Column(String(255), nullable=False))
+    permission_name: str = Field(
+        sa_column=Column(String(255), unique=True, nullable=False)
+    )
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )

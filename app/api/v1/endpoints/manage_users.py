@@ -19,9 +19,7 @@ router = APIRouter(
 )
 
 
-# ==================================================
 # CREATE
-# ==================================================
 @router.post(
     "",
     response_model=ManageUserResponse,
@@ -35,9 +33,7 @@ async def create_manage_user(
     return await service.create(payload)
 
 
-# ==================================================
-# LIST (PAGINATION + SEARCH + FILTER)
-# ==================================================
+# LIST
 @router.get(
     "",
     response_model=ManageUserListResponse,
@@ -64,19 +60,13 @@ async def list_manage_users(
         status=status,
     )
 
-    # NOTE:
-    # total di sini adalah jumlah hasil query saat ini
-    # (jika mau total seluruh data tanpa pagination,
-    # kita bisa buat service count terpisah)
     return ManageUserListResponse(
         total=len(items),
         items=items,
     )
 
 
-# ==================================================
 # GET BY ID
-# ==================================================
 @router.get(
     "/{id}",
     response_model=ManageUserResponse,
@@ -89,9 +79,7 @@ async def get_manage_user_detail(
     return await service.get_by_id(id)
 
 
-# ==================================================
 # UPDATE
-# ==================================================
 @router.put(
     "/{id}",
     response_model=ManageUserResponse,
@@ -105,9 +93,7 @@ async def update_manage_user(
     return await service.update(id, payload)
 
 
-# ==================================================
-# SOFT DELETE (SET STATUS = INACTIVE)
-# ==================================================
+# SOFT DELETE
 @router.delete(
     "/{id}",
     response_model=ManageUserResponse,
@@ -120,9 +106,7 @@ async def soft_delete_manage_user(
     return await service.soft_delete(id)
 
 
-# ==================================================
-# HARD DELETE (PERMANENT)
-# ==================================================
+# HARD DELETE
 @router.delete(
     "/{id}/force",
     status_code=status.HTTP_204_NO_CONTENT,

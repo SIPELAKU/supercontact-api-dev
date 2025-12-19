@@ -1,83 +1,40 @@
-from uuid import UUID
+from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_async_session
-from app.schemas.role_schema import (
-    RoleCreate,
-    RoleUpdate,
-    RoleRead,
-)
+from app.db.session import get_async_session
 from app.services.role_service import RoleService
-
-router = APIRouter(prefix="/roles", tags=["Roles"])
-
-
-def get_role_service(db: AsyncSession = Depends(get_async_session)):
-    return RoleService(db)
+from app.schemas.role_schema import RoleCreate, RoleRead
 
 
+router = APIRouter(
+    prefix="/roles",
+    tags=["Roles"],
+)
+
+
+# CREATE
 @router.post(
     "",
     response_model=RoleRead,
-    # dependencies=[Depends(require_permissions("role:create"))],
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_role(
-        data: RoleCreate,
-        service: RoleService = Depends(get_role_service),
+    payload: RoleCreate,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.create_role(
-        role_name=data.role_name,
-        is_system_role=data.is_system_role,
-    )
+    service = RoleService(db)
+    return await service.create(payload.role_name)
 
 
+# LIST
 @router.get(
     "",
-    response_model=list[RoleRead],
-    # dependencies=[Depends(require_permissions("role:read"))],
+    response_model=List[RoleRead],
 )
-async def list_roles(service: RoleService = Depends(get_role_service)):
-    return await service.get_roles()
-
-
-@router.get(
-    "/{role_id}",
-    response_model=RoleRead,
-    # dependencies=[Depends(require_permissions("role:read"))],
-)
-async def get_role_by_id(
-        role_id: UUID,
-        service: RoleService = Depends(get_role_service),
+async def list_roles(
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.get_role_by_id(role_id)
-
-
-@router.put(
-    "/{role_id}",
-    response_model=RoleRead,
-    # dependencies=[Depends(require_permissions("role:update"))],
-)
-async def update_role(
-        role_id: UUID,
-        data: RoleUpdate,
-        service: RoleService = Depends(get_role_service),
-):
-    return await service.update_role(
-        role_id=role_id,
-        role_name=data.role_name,
-        is_system_role=data.is_system_role,
-    )
-
-
-@router.delete(
-    "/{role_id}",
-    # dependencies=[Depends(require_permissions("role:delete"))],
-)
-async def delete_role(
-        role_id: UUID,
-        service: RoleService = Depends(get_role_service),
-):
-    await service.delete_role(role_id)
-    return {"message": "Role deleted successfully"}
+    service = RoleService(db)
+    return await service.get_all()

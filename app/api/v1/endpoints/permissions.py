@@ -1,69 +1,83 @@
 from uuid import UUID
+from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
+from app.services.permission_service import PermissionService
 from app.schemas.permission_schema import (
     PermissionCreate,
+    PermissionUpdate,
     PermissionRead,
     PermissionReadWithRoles,
-    PermissionAssignRoles,
+    PaginatedPermission,
 )
-from app.services.permission_service import PermissionService
 
-router = APIRouter(prefix="/permission", tags=["Permissions"])
-
-
-def get_service(db: AsyncSession = Depends(get_async_session)):
-    return PermissionService(db)
+router = APIRouter(
+    prefix="/permissions",
+    tags=["Permissions"],
+)
 
 
+# CREATE
 @router.post(
     "",
     response_model=PermissionRead,
-    # dependencies=[Depends(require_permissions("permission:create"))],
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_permission(
-    data: PermissionCreate,
-    service: PermissionService = Depends(get_service),
+    payload: PermissionCreate,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.create_permission(data.permission_name)
+    service = PermissionService(db)
+    return await service.create_permission(
+        permission_name=payload.permission_name,
+        role_names=payload.role_names,
+    )
 
 
+# LIST
 @router.get(
+    "",
+    response_model=PaginatedPermission,
+)
+async def list_permissions(
+    search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_session),
+):
+    service = PermissionService(db)
+    return await service.get_all(search, page, size)
+
+
+# UPDATE
+@router.put(
     "/{permission_id}",
     response_model=PermissionReadWithRoles,
-    # dependencies=[Depends(require_permissions("permission:read"))],
 )
-async def get_permission(
+async def update_permission(
     permission_id: UUID,
-    service: PermissionService = Depends(get_service),
+    payload: PermissionUpdate,
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await service.repo.get_permission_by_id(permission_id)
+    service = PermissionService(db)
+    return await service.update_permission(
+        permission_id=permission_id,
+        permission_name=payload.permission_name,
+        role_names=payload.role_names,
+    )
 
 
-@router.post(
-    "/{permission_id}/roles",
-    # dependencies=[Depends(require_permissions("permission:assign-roles"))],
-)
-async def assign_roles(
-    permission_id: UUID,
-    data: PermissionAssignRoles,
-    service: PermissionService = Depends(get_service),
-):
-    await service.assign_roles(permission_id, data.role_ids)
-    return {"message": "Roles assigned to permission"}
-
-
+# DELETE
 @router.delete(
-    "/{permission_id}/roles/{role_id}",
-    # dependencies=[Depends(require_permissions("permission:remove-role"))],
+    "/{permission_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-async def remove_role(
+async def delete_permission(
     permission_id: UUID,
-    role_id: UUID,
-    service: PermissionService = Depends(get_service),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    await service.remove_role(permission_id, role_id)
-    return {"message": "Role removed from permission"}
+    service = PermissionService(db)
+    await service.delete_permission(permission_id)
