@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_, func
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
-from app.models.manage_user_model import ManageUser
+from app.models.manage_user_model import ManageUser, UserStatus
 from app.models.role_model import Role
 from app.models.department_model import Department
 from app.models.branch_model import Branch
@@ -24,20 +25,32 @@ class ManageUserService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def _get_or_404(self, model, condition, code, message):
+    # ==================================================
+    # HELPERS
+    # ==================================================
+    async def _get_or_404(self, model, condition, code: ErrorCode, message: str):
         result = await self.db.execute(select(model).where(condition))
         obj = result.scalars().first()
+
         if not obj:
-            raise AppException(status_code=404, code=code, message=message)
+            raise AppException(
+                status_code=404,
+                code=code,
+                message=message,
+            )
+
         return obj
 
     async def _validate_unique_employee_id(
-        self, employee_id: Optional[str], exclude_id: Optional[UUID] = None
+        self,
+        employee_id: Optional[str],
+        exclude_id: Optional[UUID] = None,
     ):
         if not employee_id:
             return
 
         query = select(ManageUser).where(ManageUser.employee_id == employee_id)
+
         if exclude_id:
             query = query.where(ManageUser.id != exclude_id)
 
@@ -49,7 +62,11 @@ class ManageUserService:
                 message="Employee ID already exists",
             )
 
-    def _validate_position_rule(self, user_level: UserLevel, position):
+    def _validate_position_rule(
+        self,
+        user_level: UserLevel,
+        position: Optional[str],
+    ):
         if user_level in {UserLevel.SUPERVISOR, UserLevel.MANAGER} and not position:
             raise AppException(
                 status_code=400,
@@ -57,33 +74,18 @@ class ManageUserService:
                 message="Supervisor or Manager must have a position",
             )
 
-    async def _to_response(self, mu: ManageUser) -> ManageUserResponse:
-        user = await self.db.get(User, mu.user_id)
-
-        role_name = None
-        department_name = None
-        branch_name = None
-
-        if mu.role_id:
-            role = await self.db.get(Role, mu.role_id)
-            role_name = role.role_name if role else None
-
-        if mu.department_id:
-            department = await self.db.get(Department, mu.department_id)
-            department_name = department.name if department else None
-
-        if mu.branch_id:
-            branch = await self.db.get(Branch, mu.branch_id)
-            branch_name = branch.name if branch else None
-
+    # ==================================================
+    # RESPONSE MAPPER
+    # ==================================================
+    def _to_response(self, mu: ManageUser) -> ManageUserResponse:
         return ManageUserResponse(
             id=mu.id,
-            user_id=user.id,
-            fullname=user.fullname,
-            email=user.email,
-            role=role_name,
-            department=department_name,
-            branch=branch_name,
+            user_id=mu.user.id,
+            fullname=mu.user.fullname,
+            email=mu.user.email,
+            role=mu.role.role_name if mu.role else None,
+            department=mu.department.name if mu.department else None,
+            branch=mu.branch.name if mu.branch else None,
             user_level=mu.user_level,
             position=mu.position,
             employee_id=mu.employee_id,
@@ -92,7 +94,34 @@ class ManageUserService:
             updated_at=mu.updated_at,
         )
 
+    # ==================================================
+    # GET BY ID (AMAN)
+    # ==================================================
+    async def get_by_id(self, id: UUID) -> ManageUserResponse:
+        result = await self.db.execute(
+            select(ManageUser)
+            .where(ManageUser.id == id)
+            .options(
+                selectinload(ManageUser.user),
+                selectinload(ManageUser.role),
+                selectinload(ManageUser.department),
+                selectinload(ManageUser.branch),
+            )
+        )
+
+        mu = result.scalars().first()
+        if not mu:
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.MANAGE_USER_NOT_FOUND,
+                message="Manage user not found",
+            )
+
+        return self._to_response(mu)
+
+    # ==================================================
     # CREATE
+    # ==================================================
     async def create(self, data: ManageUserCreateRequest) -> ManageUserResponse:
         user = await self._get_or_404(
             User,
@@ -153,17 +182,19 @@ class ManageUserService:
             branch_id=branch_id,
             user_level=data.user_level,
             position=data.position,
-            employee_id=data.employee_id,
-            status=data.status,
+            employee_id=data.employee_id or None,
+            status=UserStatus.PENDING,
         )
 
         self.db.add(mu)
         await self.db.commit()
         await self.db.refresh(mu)
 
-        return await self._to_response(mu)
+        return await self.get_by_id(mu.id)
 
-    # UPDATE
+    # ==================================================
+    # UPDATE (🔥 FIXED)
+    # ==================================================
     async def update(
         self, id: UUID, data: ManageUserUpdateRequest
     ) -> ManageUserResponse:
@@ -175,12 +206,6 @@ class ManageUserService:
         )
 
         payload = data.model_dump(exclude_unset=True)
-
-        if "role" in payload and not payload["role"]:
-            raise AppException(400, ErrorCode.INVALID_REQUEST, "Role is required")
-
-        if "department" in payload and not payload["department"]:
-            raise AppException(400, ErrorCode.INVALID_REQUEST, "Department is required")
 
         if "role" in payload:
             role = await self._get_or_404(
@@ -216,7 +241,8 @@ class ManageUserService:
 
         if "employee_id" in payload:
             await self._validate_unique_employee_id(
-                payload["employee_id"], exclude_id=id
+                payload["employee_id"],
+                exclude_id=id,
             )
 
         new_level = payload.get("user_level", mu.user_level)
@@ -229,4 +255,45 @@ class ManageUserService:
 
         await self.db.commit()
         await self.db.refresh(mu)
-        return await self._to_response(mu)
+
+        # ✅ JANGAN _to_response(mu)
+        return await self.get_by_id(mu.id)
+
+    # ==================================================
+    # SOFT DELETE (🔥 FIXED)
+    # ==================================================
+    async def soft_delete(self, id: UUID) -> ManageUserResponse:
+        mu = await self._get_or_404(
+            ManageUser,
+            ManageUser.id == id,
+            ErrorCode.MANAGE_USER_NOT_FOUND,
+            "Manage user not found",
+        )
+
+        if mu.status == UserStatus.INACTIVE:
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.USER_ALREADY_INACTIVE,
+                message="User already inactive",
+            )
+
+        mu.status = UserStatus.INACTIVE
+        await self.db.commit()
+        await self.db.refresh(mu)
+
+        # ✅ JANGAN _to_response(mu)
+        return await self.get_by_id(mu.id)
+
+    # ==================================================
+    # HARD DELETE
+    # ==================================================
+    async def hard_delete(self, id: UUID) -> None:
+        mu = await self._get_or_404(
+            ManageUser,
+            ManageUser.id == id,
+            ErrorCode.MANAGE_USER_NOT_FOUND,
+            "Manage user not found",
+        )
+
+        await self.db.delete(mu)
+        await self.db.commit()
