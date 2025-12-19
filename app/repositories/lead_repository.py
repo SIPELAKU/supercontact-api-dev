@@ -100,8 +100,12 @@ class LeadRepository:
         )
 
         # Base query: Lead join Contact join subquery
-        query = select(Lead).join(Lead.contact).join(
-            last_note_subq, last_note_subq.c.contact_id == Contact.id
+        query = (
+            select(Lead)
+            .join(Lead.contact)
+            .outerjoin(
+                last_note_subq, last_note_subq.c.contact_id == Contact.id
+            )
         )
 
         # Filtering
@@ -114,10 +118,12 @@ class LeadRepository:
 
         if query_params.date_from:
             query = query.where(
-                last_note_subq.c.last_contacted >= datetime.combine(query_params.date_from, datetime.min.time()))
+                last_note_subq.c.last_contacted >= datetime.combine(query_params.date_from, datetime.min.time())
+            )
         if query_params.date_to:
             query = query.where(
-                last_note_subq.c.last_contacted <= datetime.combine(query_params.date_to, datetime.max.time()))
+                last_note_subq.c.last_contacted <= datetime.combine(query_params.date_to, datetime.max.time())
+            )
 
         if query_params.search:
             query = query.join(Lead.contact).where(Contact.name.ilike(f"%{query_params.search}%"))

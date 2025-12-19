@@ -15,10 +15,10 @@ from .contact_schema import (
     ContactUpdate,
     PaginatedContacts,
     ContactResponse,
-    NoteCreate,
-    NoteResponse,
-    TaskCreate,
-    TaskResponse,
+    ContactNoteCreate,
+    ContactNoteResponse,
+    ContactTaskCreate,
+    ContactTaskResponse,
     ContactDeleteResponse,
     ContactGetQuery,
     ContactSortOrder,
@@ -40,6 +40,13 @@ from .mailing_schema import (
     MailingResponse,
     MailingUpdate,
     PaginatedMailings
+)
+from .note_schema import (
+    NoteCreate,
+    NoteUpdate,
+    PaginatedNote,
+    NoteResponse,
+    NoteGetQuery
 )
 from .pipeline_schema import (
     PipelineRequest,
@@ -71,11 +78,4 @@ from .user_schema import (
     UserUpdateRequest,
     UserResponse,
     UserGetQuery
-)
-from .note_schema import (
-    NoteCreate,
-    NoteUpdate,
-    PaginatedNote,
-    NoteResponse,
-    NoteGetQuery
 )

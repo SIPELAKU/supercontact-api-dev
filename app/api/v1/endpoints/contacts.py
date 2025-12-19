@@ -9,9 +9,16 @@ from app.models import User
 from app.schemas import (
     ContactCreate, ContactUpdate,
     PaginatedContacts,
-    NoteCreate, NoteResponse,
-    TaskCreate, TaskResponse,
-    ResponseModel, ContactResponse, ContactDeleteResponse, ContactSortBy, ContactSortOrder, ContactGetQuery
+    ContactNoteCreate,
+    ContactNoteResponse,
+    ContactTaskCreate,
+    ContactTaskResponse,
+    ResponseModel,
+    ContactResponse,
+    ContactDeleteResponse,
+    ContactSortBy,
+    ContactSortOrder,
+    ContactGetQuery
 )
 from app.services.contact_service import ContactService
 
@@ -108,11 +115,11 @@ async def delete_contact_by_id(
 
 @router.post(
     "/{contact_id}/notes",
-    response_model=ResponseModel[NoteResponse],
+    response_model=ResponseModel[ContactNoteResponse],
 )
 async def create_note(
         contact_id: UUID,
-        data: NoteCreate,
+        data: ContactNoteCreate,
         service: ContactService = Depends(get_contact_service),
         current_user: User = Depends(auth_require)
 ):
@@ -123,7 +130,7 @@ async def create_note(
 # GET NOTES
 @router.get(
     "/{contact_id}/notes",
-    response_model=ResponseModel[list[NoteResponse]]
+    response_model=ResponseModel[list[ContactNoteResponse]]
 )
 async def get_all_notes(
         contact_id: UUID,
@@ -136,12 +143,12 @@ async def get_all_notes(
 # CREATE TASK
 @router.post(
     "/{contact_id}/tasks",
-    response_model=ResponseModel[TaskResponse],
+    response_model=ResponseModel[ContactTaskResponse],
     # dependencies=[Depends(auth_require)]
 )
 async def create_task(
         contact_id: UUID,
-        data: TaskCreate,
+        data: ContactTaskCreate,
         service: ContactService = Depends(get_contact_service),
 ):
     task = await service.create_task(contact_id=contact_id, data=data)
@@ -151,7 +158,7 @@ async def create_task(
 # GET TASKS
 @router.get(
     "/{contact_id}/tasks",
-    response_model=ResponseModel[list[TaskResponse]],
+    response_model=ResponseModel[list[ContactTaskResponse]],
     # dependencies=[Depends(auth_require)]
 )
 async def get_all_tasks(
