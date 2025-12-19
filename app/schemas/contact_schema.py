@@ -36,8 +36,6 @@ class ContactBase(SQLModel):
     phone: Optional[str]
     job_title: Optional[str]
     address: Optional[str]
-    created_at: datetime
-    updated_at: datetime
 
 
 class ContactResponse(ContactBase):

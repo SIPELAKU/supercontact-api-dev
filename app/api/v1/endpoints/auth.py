@@ -5,6 +5,7 @@ from app.db import get_async_session
 from app.schemas import ResponseModel, UserLoginResponse, UserLoginRequest
 from app.schemas.auth_schema import UserRegisterResponse, UserRegisterRequest, ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse
 from app.services import AuthService
+from fastapi import Request
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -24,20 +25,25 @@ async def user_register(payload: UserRegisterRequest, service: AuthService = Dep
         )
     )
 
-
-# USER LOGIN
 @router.post("/login", response_model=ResponseModel[UserLoginResponse])
 async def user_login(
-        payload: UserLoginRequest, service: AuthService = Depends(get_auth_service)
+    payload: UserLoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+    service: AuthService = Depends(get_auth_service),
 ):
-    user, access_token = await service.login(payload)
+    user, access_token = await service.login(
+        payload=payload,
+        db=db,
+        request=request,
+    )
+
     return ResponseModel(
         data=UserLoginResponse(
             user=user,
             access_token=access_token,
         )
     )
-
 
 # USER FORGOT PASSWORD
 @router.post("/forgot-password", response_model=ResponseModel[ForgotPasswordResponse])

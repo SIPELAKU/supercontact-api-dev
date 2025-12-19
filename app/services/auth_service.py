@@ -7,6 +7,12 @@ from app.repositories import UserRepository
 from app.schemas.auth_schema import UserRegisterRequest, UserLoginRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.schemas.error_schema import ErrorCode
 from app.core.security import hash_password
+from app.utils.user_agent import parse_user_agent
+from app.utils.user_agent import parse_user_agent
+from app.models.userdevice_model import UserDevice
+from sqlalchemy import select
+from datetime import datetime
+from fastapi import Request
 
 
 class AuthService:
@@ -56,19 +62,46 @@ class AuthService:
         )
         return await self.repo.create(user)
 
-    async def login(self, payload: UserLoginRequest):
+    async def login(
+        self,
+        payload: UserLoginRequest,
+        db: AsyncSession,
+        request: Request,
+    ):
         user = await self.repo.get_by_email(email=payload.email)
 
         if not user:
-            raise AppException(
-                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+            raise AppException(...)
+
+        if not verify_password(payload.password, user.password):
+            raise AppException(...)
+
+        browser, device = parse_user_agent(
+            request.headers.get("user-agent", "")
+        )
+
+        result = await db.execute(
+            select(UserDevice).where(
+                UserDevice.user_id == user.id,
+                UserDevice.browser == browser,
+                UserDevice.device == device,
+            )
+        )
+        user_device = result.scalar_one_or_none()
+
+        if user_device:
+            user_device.last_activity = datetime.utcnow()
+
+        else:
+            db.add(
+                UserDevice(
+                    user_id=user.id,
+                    browser=browser,
+                    device=device,
+                )
             )
 
-        validate_password = verify_password(payload.password, user.password)
-        if not validate_password:
-            raise AppException(
-                status_code=401, code=ErrorCode.AUTH_REQUIRED, message="Wrong password"
-            )
+        await db.commit()
 
         access_token = self.create_token(user)
         return user, access_token

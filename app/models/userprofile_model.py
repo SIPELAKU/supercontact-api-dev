@@ -11,6 +11,9 @@ class UserDetail(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="users.id")
 
+    fullname: str = Field(sa_column=Column(String(255), nullable=False))
+    email: str = Field(sa_column=Column(String(255), unique=True, nullable=False))
+    company: str = Field(sa_column=Column(String(255), nullable=False))
     country: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
     language: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
     phone: Optional[str] = Field(sa_column=Column(String(255), nullable=False))
