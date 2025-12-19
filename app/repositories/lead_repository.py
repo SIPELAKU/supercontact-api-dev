@@ -96,10 +96,6 @@ class LeadRepository:
         else:
             query = query.order_by(asc(Lead.created_at))
 
-        # Pagination
-        offset = (query_params.page - 1) * query_params.limit
-        query = query.offset(offset).limit(query_params.limit)
-
         # Load relationships if needed
         if load_user or load_contact:
             query = query.options(
@@ -107,12 +103,16 @@ class LeadRepository:
                 selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
             )
 
-        result = await self.db.scalars(query)
-        leads = result.all()
-
         # Total count
         total_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(total_query)
+
+        # Pagination
+        offset = (query_params.page - 1) * query_params.limit
+        query = query.offset(offset).limit(query_params.limit)
+
+        result = await self.db.scalars(query)
+        leads = result.all()
 
         return leads, total
 
