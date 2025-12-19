@@ -11,6 +11,8 @@ from .endpoints import (
     roles_router,
     permissions_router,
     department_router,
+    mailings_router,
+    notes_router,
 )
 
 from .router import api_router

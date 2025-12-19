@@ -68,14 +68,10 @@ class UserService:
             "total_pages": (total + query_params.limit - 1) // query_params.limit,
         }
 
-    # CREATE
-    async def create(self, req: UserCreateRequest) -> User:
-        if await self.repo.get_by_email(req.email):
-            raise AppException(
-                status_code=400,
-                code=ErrorCode.VALIDATION_ERROR,
-                message="Email already registered",
-            )
+    async def create(self, req: UserCreateRequest):
+        existing = await self.repo.get_by_email(req.email)
+        if existing:
+            raise AppException(status_code=400, code=ErrorCode.VALIDATION_ERROR, message="Email already registered")
 
         avatar_initial = req.fullname[:2].upper()
 

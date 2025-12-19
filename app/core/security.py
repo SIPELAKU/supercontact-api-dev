@@ -1,12 +1,11 @@
 from datetime import datetime, timezone, timedelta
+from enum import StrEnum
 from uuid import UUID
-import hashlib
-import hmac
-import secrets
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, ExpiredSignatureError, JWTError
+from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -15,101 +14,100 @@ from app.models import UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+access_token_scheme = HTTPBearer(
+    scheme_name="AccessToken",
+    auto_error=False
+)
 
-# ==================================================
-# CONSTANTS
-# ==================================================
+reset_token_scheme = HTTPBearer(
+    scheme_name="ResetPasswordToken",
+    auto_error=False
+)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-bearer_scheme = HTTPBearer(auto_error=False)
-
-_HASH_NAME = "sha256"
-_ITERATIONS = 120_000
-_SALT_SIZE = 32
+TOKEN_EXPIRE_MINUTES = 60
 
 
-# ==================================================
-# DATABASE DEPENDENCY
-# ==================================================
+class TokenType(StrEnum):
+    ACCESS_TOKEN = "access_token"
+    RESET_PASSWORD = "reset_password"
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 async def get_db_session():
     from app.db import get_async_session
-
     async for session in get_async_session():
         yield session
 
 
-# ==================================================
-# PASSWORD HASHING (Python 3.14 SAFE)
-# ==================================================
-
-
-def hash_password(password: str) -> str:
-    """
-    Hash password using PBKDF2-HMAC-SHA256
-    Format:
-    pbkdf2$iterations$salt$hash
-    """
-    salt = secrets.token_bytes(_SALT_SIZE)
-    dk = hashlib.pbkdf2_hmac(
-        _HASH_NAME,
-        password.encode("utf-8"),
-        salt,
-        _ITERATIONS,
-    )
-    return f"pbkdf2${_ITERATIONS}${salt.hex()}${dk.hex()}"
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        algo, iterations, salt_hex, hash_hex = hashed_password.split("$")
-        if algo != "pbkdf2":
-            return False
-
-        salt = bytes.fromhex(salt_hex)
-        expected_hash = bytes.fromhex(hash_hex)
-
-        dk = hashlib.pbkdf2_hmac(
-            _HASH_NAME,
-            plain_password.encode("utf-8"),
-            salt,
-            int(iterations),
-        )
-
-        return hmac.compare_digest(dk, expected_hash)
-
-    except Exception:
-        return False
-
-
-# ==================================================
-# JWT TOKEN
-# ==================================================
-
-
-def create_access_token(
-    data: dict,
-    expire_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES,
-) -> str:
+def create_token(data: dict, token_type: TokenType, expire_minutes: int = TOKEN_EXPIRE_MINUTES):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     to_encode.update({"exp": expire})
 
+    token_key = settings.SECRET_KEY
+
+    if token_type == token_type.RESET_PASSWORD:
+        token_key = settings.RESET_PASSWORD_KEY
+
     return jwt.encode(
         to_encode,
-        settings.SECRET_KEY,
+        token_key,
         algorithm=settings.ALGORITHM,
     )
 
 
-def decode_access_token(token: str) -> dict:
+async def auth_require(
+        credentials: HTTPAuthorizationCredentials = Depends(access_token_scheme),
+        db: AsyncSession = Depends(get_db_session),
+):
+    if not credentials:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Authorization token is required",
+        )
+
     try:
-        return jwt.decode(
+        token = credentials.credentials
+        payload = jwt.decode(
             token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Invalid token payload",
+            )
+
+        user = await db.get(User, UUID(user_id))
+        if not user:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="User not found",
+            )
+
+        if user.status != UserStatus.ACTIVE:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="User is inactive",
+            )
+
+        return user
+
     except ExpiredSignatureError:
         raise AppException(
             status_code=401,
@@ -124,55 +122,6 @@ def decode_access_token(token: str) -> dict:
         )
 
 
-# ==================================================
-# AUTH DEPENDENCY
-# ==================================================
-
-
-async def auth_require(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db_session),
-):
-    if not credentials:
-        raise AppException(
-            status_code=401,
-            code=ErrorCode.AUTH_REQUIRED,
-            message="Authorization token is required",
-        )
-
-    payload = decode_access_token(credentials.credentials)
-
-    user_id = payload.get("user_id")
-    if not user_id:
-        raise AppException(
-            status_code=401,
-            code=ErrorCode.AUTH_REQUIRED,
-            message="Invalid token payload",
-        )
-
-    user = await db.get(User, UUID(user_id))
-    if not user:
-        raise AppException(
-            status_code=401,
-            code=ErrorCode.AUTH_REQUIRED,
-            message="User not found",
-        )
-
-    if user.status != UserStatus.ACTIVE:
-        raise AppException(
-            status_code=401,
-            code=ErrorCode.AUTH_REQUIRED,
-            message="User is inactive",
-        )
-
-    return user
-
-
-# ==================================================
-# ROLE GUARD
-# ==================================================
-
-
 def check_roles(*allowed_roles: str):
     async def depends_auth(user: User = Depends(auth_require)):
         if user.role not in allowed_roles:
@@ -184,3 +133,53 @@ def check_roles(*allowed_roles: str):
         return user
 
     return depends_auth
+
+
+async def reset_token(
+        credentials: HTTPAuthorizationCredentials = Depends(reset_token_scheme),
+        db: AsyncSession = Depends(get_db_session),
+):
+    if not credentials:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Reset token is required",
+        )
+
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(
+            token,
+            settings.RESET_PASSWORD_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Invalid token payload",
+            )
+
+        user = await db.get(User, UUID(user_id))
+        if not user:
+            raise AppException(
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="User not found",
+            )
+        return UUID(user_id)
+
+    except ExpiredSignatureError:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Reset token has expired",
+        )
+    except JWTError:
+        raise AppException(
+            status_code=401,
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Invalid reset token",
+        )

@@ -1,4 +1,5 @@
 from datetime import timezone, datetime
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
@@ -6,9 +7,9 @@ from sqlmodel import select, func, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
-from app.models import Quotation, Lead, QuotationItem, Contact, Product
-from app.schemas import QuotationRequest, ErrorCode
-from app.schemas.quotation_schema import QuotationGetQuery
+from app.models import Quotation, Lead, QuotationItem, Contact, Product, QuotationStatus
+from app.schemas import QuotationGetQuery, QuotationRequest, ErrorCode
+from app.utils import get_next_sequence, PrefixSequence
 
 
 class QuotationRepository:
@@ -24,7 +25,10 @@ class QuotationRepository:
                     selectinload(QuotationItem.product)
                 ),
                 selectinload(Quotation.lead).options(
-                    selectinload(Lead.contact)
+                    selectinload(Lead.contact),
+                ),
+                selectinload(Quotation.lead).options(
+                    selectinload(Lead.user)
                 )
             )
         )
@@ -33,10 +37,13 @@ class QuotationRepository:
     async def get_product_by_id(self, product_id: UUID):
         return await self.db.scalar(select(Product).where(Product.id == product_id))
 
-    async def create(self, payload: QuotationRequest):
+    async def create(self, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
+        year, quo_seq = await get_next_sequence(prefix=PrefixSequence.QUOTATION, db=self.db)
+        quotation_number = f"QUO-{year}-{quo_seq:03d}"
         quotation = Quotation(
             lead_id=payload.lead_id,
+            quotation_number=quotation_number,
             quotation_title=payload.quotation_title,
             expire_date=payload.expire_date,
             grand_total=grand_total,
@@ -53,20 +60,21 @@ class QuotationRepository:
 
             unit_price = product.price
             subtotal = unit_price * item.quantity
-            grand_total += subtotal
+            grand_total += subtotal * (Decimal("1") - (Decimal(item.discount) / Decimal("100")))
 
             quotation_item = QuotationItem(
                 quotation_id=quotation.id,
                 product_id=item.product_id,
                 quantity=item.quantity,
                 unit_price=unit_price,
-                subtotal=subtotal,
                 notes=item.notes,
+                discount=item.discount,
             )
             self.db.add(quotation_item)
 
         # UPDATE GRAND TOTAL
-        quotation.grand_total = grand_total
+        quotation.grand_total = round(grand_total)
+        quotation.quotation_status = status
 
         await self.db.commit()
         await self.db.refresh(quotation)
@@ -83,7 +91,8 @@ class QuotationRepository:
                     selectinload(QuotationItem.product)
                 ),
                 selectinload(Quotation.lead).options(
-                    selectinload(Lead.contact)
+                    selectinload(Lead.contact),
+                    selectinload(Lead.user)
                 )
             )
         )
@@ -109,12 +118,13 @@ class QuotationRepository:
 
         return quotations, total
 
-    async def update(self, quotation: Quotation, payload: QuotationRequest):
+    async def update(self, quotation: Quotation, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
         # UPDATE FIELD PARENT
         quotation.lead_id = payload.lead_id
         quotation.quotation_title = payload.quotation_title
         quotation.expire_date = payload.expire_date
+        quotation.quotation_status = status
 
         old_items = await self.db.scalars(
             select(QuotationItem)

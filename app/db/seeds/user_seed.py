@@ -1,10 +1,11 @@
 import asyncio
+
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from app.core.security import hash_password
+from app.core import hash_password
 from app.db import get_async_session
 from app.models import User, UserPosition
-
 
 USERS = [
     {
@@ -73,15 +74,14 @@ async def seed_users():
             print(f"User created: {data['email']}")
 
         await db.commit()
-        print("User seeding completed")
-
-    except Exception as e:
-        await db.rollback()
+    except IntegrityError as e:
         print("Rollback:", e)
-
+        await db.rollback()
     finally:
         await db.close()
 
 
 if __name__ == "__main__":
+    print("Running database seed...")
     asyncio.run(seed_users())
+    print("Seed completed!")

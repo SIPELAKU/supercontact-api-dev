@@ -4,13 +4,21 @@ from uuid import UUID
 
 from fastapi import Query
 from pydantic import EmailStr
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
+
+from app.models import QuotationStatus
 
 
 class Product(SQLModel):
     product_name: str
     sku: str
     price: float
+
+
+class User(SQLModel):
+    id: UUID
+    fullname: str
+    email: EmailStr
 
 
 class Contact(SQLModel):
@@ -25,11 +33,12 @@ class Lead(SQLModel):
     id: UUID
     office_location: str
     contact: Contact
+    user: User
 
 
 class QuotationGetQuery(SQLModel):
     page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=0, le=100)
+    limit: int = Query(10, ge=1, le=100)
     date_from: Optional[date] = Query(None)
     date_to: Optional[date] = Query(None)
     search: Optional[str] = Query(None)
@@ -37,8 +46,9 @@ class QuotationGetQuery(SQLModel):
 
 class QuotationItemRequest(SQLModel):
     product_id: UUID
-    quantity: int
+    quantity: int = Field(gt=0)
     notes: Optional[str]
+    discount: int = Field(ge=0, le=25)
 
 
 class QuotationRequest(SQLModel):
@@ -53,18 +63,20 @@ class QuotationItemResponse(SQLModel):
     quotation_id: UUID
     product_id: UUID
     quantity: int
-    unit_price: float
-    subtotal: float
+    unit_price: int
     notes: Optional[str]
+    discount: int
     product: Product
 
 
 class QuotationResponse(SQLModel):
     id: UUID
     lead_id: UUID
+    quotation_number: str
     quotation_title: str
     expire_date: datetime
-    grand_total: float
+    grand_total: int
+    quotation_status: QuotationStatus
     lead: Lead
     items: List[QuotationItemResponse]
     created_at: datetime
@@ -78,6 +90,7 @@ class QuotationListResponse(SQLModel):
     quotations: List[QuotationResponse]
 
 
-class QuotationDeleteResponse(SQLModel):
-    id: UUID
-    deleted: bool
+class QuotationSendEmailResponse(SQLModel):
+    to_email: EmailStr
+    subject: str
+    delivered: bool

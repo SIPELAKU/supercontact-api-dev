@@ -13,6 +13,8 @@ from app.api.v1 import (
     roles_router,
     permissions_router,
     department_router,
+    mailings_router,
+    notes_router,
 )
 
 api_router = APIRouter()
@@ -29,3 +31,5 @@ api_router.include_router(manage_users_router)
 api_router.include_router(roles_router)
 api_router.include_router(permissions_router)
 api_router.include_router(department_router)
+api_router.include_router(mailings_router)
+api_router.include_router(notes_router)

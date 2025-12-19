@@ -4,24 +4,37 @@ from .auth_schema import (
     UserLoginResponse,
     UserRegisterResponse,
     UserRegisterRequest,
+    ResendOtpRequest,
+    ResendOtpResponse,
+    VerifyOtpRequest,
+    VerifyOtpResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
-
+# BRANCH
+from .branch_schema import (
+    BranchCreate,
+    BranchUpdate,
+    BranchRead,
+    BranchReadWithDepartment,
+)
 # CONTACT
 from .contact_schema import (
     ContactCreate,
     ContactUpdate,
     PaginatedContacts,
     ContactResponse,
-    NoteCreate,
-    NoteResponse,
-    TaskCreate,
-    TaskResponse,
+    ContactNoteCreate,
+    ContactNoteResponse,
+    ContactTaskCreate,
+    ContactTaskResponse,
     ContactDeleteResponse,
+    ContactGetQuery,
+    ContactSortOrder,
+    ContactSortBy
 )
-
 # ERROR
 from .error_schema import ErrorCode, ErrorResponse
-
 # LEAD
 from .lead_schema import (
     LeadResponse,
@@ -32,7 +45,13 @@ from .lead_schema import (
     LeadUpdateStatus,
     LeadDeleteResponse,
 )
-
+from .mailing_schema import (
+    MailingCreate,
+    MailingDeleteResponse,
+    MailingResponse,
+    MailingUpdate,
+    PaginatedMailings
+)
 # MANAGE USER
 from .manage_user_schema import (
     ManageUserListResponse,
@@ -41,7 +60,13 @@ from .manage_user_schema import (
     ManageUserUpdateRequest,
     UserLevel,
 )
-
+from .note_schema import (
+    NoteCreate,
+    NoteUpdate,
+    PaginatedNote,
+    NoteResponse,
+    NoteGetQuery
+)
 # PIPELINE
 from .pipeline_schema import (
     PipelineRequest,
@@ -51,7 +76,6 @@ from .pipeline_schema import (
     PipelineListResponse,
     PipelineAssignedUsers,
 )
-
 # PRODUCT
 from .product_schema import (
     ProductGetQuery,
@@ -60,7 +84,6 @@ from .product_schema import (
     ProductListResponse,
     ProductDeleteResponse,
 )
-
 # QUOTATION
 from .quotation_schema import (
     QuotationItemRequest,
@@ -68,20 +91,20 @@ from .quotation_schema import (
     QuotationItemResponse,
     QuotationResponse,
     QuotationListResponse,
+    QuotationGetQuery,
+    QuotationSendEmailResponse,
 )
-
 # RESPONSE
 from .response_schema import ResponseModel
-
 # USER
 from .user_schema import (
     UserCreateRequest,
     UserUpdateRequest,
     UserResponse,
+    UserGetQuery,
     PaginatedUserResponse,
     UserGetQuery,
 )
-
 # DEPARTMENT
 from .department_schema import (
     DepartmentCreate,
@@ -98,3 +121,4 @@ from .branch_schema import (
     BranchRead,
     BranchReadWithDepartment,
 )
+

@@ -1,18 +1,10 @@
 import asyncio
 from uuid import uuid4
 
-from sqlmodel import SQLModel, select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import select
 
-from app.models.role_model import Role
-
-
-DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
-
-engine = create_async_engine(DATABASE_URL, echo=True)
-async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
+from app.db import get_async_session
+from app.models import Role
 
 ROLES = [
     ("SuperAdmin", True),
@@ -22,11 +14,13 @@ ROLES = [
 ]
 
 
-async def seed_roles(session: AsyncSession):
+async def seed_roles():
+    db_gen = get_async_session()
+    db = await anext(db_gen)
     roles = []
 
     for role_name, is_system in ROLES:
-        result = await session.execute(select(Role).where(Role.role_name == role_name))
+        result = await db.execute(select(Role).where(Role.role_name == role_name))
         role = result.scalar_one_or_none()
 
         if not role:
@@ -35,23 +29,15 @@ async def seed_roles(session: AsyncSession):
                 role_name=role_name,
                 is_system_role=is_system,
             )
-            session.add(role)
+            db.add(role)
 
         roles.append(role)
 
-    await session.commit()
+    await db.commit()
     return roles
 
 
-async def main():
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-
-    async with async_session() as session:
-        await seed_roles(session)
-
-    print("Seed roles selesai")
-
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("Running database seed...")
+    asyncio.run(seed_roles())
+    print("Seed completed!")
