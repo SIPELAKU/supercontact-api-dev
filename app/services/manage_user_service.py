@@ -120,6 +120,64 @@ class ManageUserService:
         return self._to_response(mu)
 
     # ==================================================
+    # GET ALL
+    # ==================================================
+    async def get_all(
+        self,
+        page: int = 1,
+        limit: int = 10,
+        search: Optional[str] = None,
+        role: Optional[str] = None,
+        department: Optional[str] = None,
+        branch: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> List[ManageUserResponse]:
+
+        offset = (page - 1) * limit
+
+        query = (
+            select(ManageUser)
+            .join(ManageUser.user)
+            .outerjoin(ManageUser.role)
+            .outerjoin(ManageUser.department)
+            .outerjoin(ManageUser.branch)
+            .options(
+                selectinload(ManageUser.user),
+                selectinload(ManageUser.role),
+                selectinload(ManageUser.department),
+                selectinload(ManageUser.branch),
+            )
+        )
+
+        if search:
+            keyword = f"%{search.lower()}%"
+            query = query.where(
+                or_(
+                    func.lower(User.fullname).like(keyword),
+                    func.lower(User.email).like(keyword),
+                    func.lower(ManageUser.employee_id).like(keyword),
+                )
+            )
+
+        if role:
+            query = query.where(Role.role_name == role)
+
+        if department:
+            query = query.where(Department.name == department)
+
+        if branch:
+            query = query.where(Branch.name == branch)
+
+        if status:
+            query = query.where(ManageUser.status == status)
+
+        result = await self.db.execute(
+            query.order_by(ManageUser.created_at.desc()).offset(offset).limit(limit)
+        )
+
+        return [self._to_response(mu) for mu in result.scalars().all()]
+
+    # ==================================================
     # CREATE
     # ==================================================
     async def create(self, data: ManageUserCreateRequest) -> ManageUserResponse:
