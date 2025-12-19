@@ -8,6 +8,7 @@ from .lead_model import (
     LeadCompanySize
 )
 from .mailing_model import Mailing
+from .note_model import Note
 from .pipeline_model import Pipeline, DealStage
 from .product_model import Product
 from .quotation_model import Quotation, QuotationItem, QuotationStatus
@@ -20,5 +21,5 @@ from .user_model import (
     UserOTP,
     UserOTPType,
 )
+from .userdevice_model import UserDevice
 from .userprofile_model import UserDetail
-from .note_model import Note

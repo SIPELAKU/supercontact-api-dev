@@ -7,4 +7,5 @@ from .products import router as products_router
 from .quotations import router as quotations_router
 from .users import router as users_router
 from .mailings import router as mailings_router
+from .userdevice import router as userdevice_router
 from .notes import router as notes_router

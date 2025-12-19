@@ -79,3 +79,5 @@ from .user_schema import (
     UserResponse,
     UserGetQuery
 )
+from .userdevice_schema import ChangePasswordSchema, UserDeviceResponse
+from .userprofile_schema import UserProfileResponse, UserProfileSchema

@@ -6,12 +6,16 @@ from pydantic import EmailStr
 from sqlmodel import SQLModel
 
 
-class AboutSchema(SQLModel):
-    country: Optional[str]
-    language: Optional[str]
-    phone: Optional[str]
-    skype: Optional[str]
-    bio: Optional[str]
+class UserProfileSchema(SQLModel):
+    fullname: Optional[str] = None
+    email: Optional[EmailStr] = None
+    company: Optional[str] = None
+    country: Optional[str] = None
+    language: Optional[str] = None
+    phone: Optional[str] = None
+    skype: Optional[str] = None
+    bio: Optional[str] = None
+
 
 class UserProfileResponse(SQLModel):
     id: UUID
@@ -22,4 +26,10 @@ class UserProfileResponse(SQLModel):
     role: Optional[str]
     joined_date: datetime
 
-    about: Optional[AboutSchema] = None
+    company: Optional[str]
+    country: Optional[str]
+    language: Optional[str]
+    phone: Optional[str]
+    skype: Optional[str]
+    bio: Optional[str]
+

@@ -1,8 +1,8 @@
 """initial migrations
 
-Revision ID: a72fd4881ab0
+Revision ID: bf2c019c4470
 Revises: 
-Create Date: 2025-12-19 16:31:55.352635
+Create Date: 2025-12-19 19:57:24.822280
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a72fd4881ab0'
+revision: str = 'bf2c019c4470'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -172,6 +172,9 @@ def upgrade() -> None:
     op.create_table('user_details',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('fullname', sa.String(length=255), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('company', sa.String(length=255), nullable=False),
     sa.Column('country', sa.String(length=255), nullable=False),
     sa.Column('language', sa.String(length=255), nullable=False),
     sa.Column('phone', sa.String(length=255), nullable=False),
@@ -180,8 +183,22 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email')
+    )
+    op.create_table('user_devices',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('browser', sa.String(length=255), nullable=False),
+    sa.Column('device', sa.String(length=255), nullable=False),
+    sa.Column('location', sa.String(length=255), nullable=True),
+    sa.Column('last_activity', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_user_devices_user_id'), 'user_devices', ['user_id'], unique=False)
     op.create_table('user_otps',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
@@ -227,6 +244,8 @@ def downgrade() -> None:
     op.drop_table('quotation_items')
     op.drop_table('quotations')
     op.drop_table('user_otps')
+    op.drop_index(op.f('ix_user_devices_user_id'), table_name='user_devices')
+    op.drop_table('user_devices')
     op.drop_table('user_details')
     op.drop_table('pipelines')
     op.drop_table('notes')

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from fastapi import Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import reset_token
@@ -41,9 +42,15 @@ async def user_register(payload: UserRegisterRequest, service: AuthService = Dep
 # USER LOGIN
 @router.post("/login", response_model=ResponseModel[UserLoginResponse])
 async def user_login(
-        payload: UserLoginRequest, service: AuthService = Depends(get_auth_service)
+        payload: UserLoginRequest,
+        request: Request,
+        service: AuthService = Depends(get_auth_service),
 ):
-    user, access_token = await service.login(payload)
+    user, access_token = await service.login(
+        payload=payload,
+        request=request,
+    )
+
     return ResponseModel(
         data=UserLoginResponse(
             user=user,
