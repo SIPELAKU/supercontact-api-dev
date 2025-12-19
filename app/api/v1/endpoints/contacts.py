@@ -109,7 +109,6 @@ async def delete_contact_by_id(
 @router.post(
     "/{contact_id}/notes",
     response_model=ResponseModel[NoteResponse],
-    # dependencies=[Depends(auth_require)]
 )
 async def create_note(
         contact_id: UUID,

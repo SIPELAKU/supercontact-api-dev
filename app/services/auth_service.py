@@ -43,7 +43,7 @@ class AuthService:
             "user_id": str(user.id),
             "email": user.email,
         }
-        return create_token(data, token_type=TokenType.ACCESS_TOKEN)
+        return create_token(data=data, token_type=TokenType.ACCESS_TOKEN)
 
     async def create_and_send_user_otp(self, user: User, otp_type: UserOTPType):
         user_otp = await self.repo.create_user_otp(user_otp=UserOTP(

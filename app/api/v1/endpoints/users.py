@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import auth_require
 from app.db import get_async_session
 from app.schemas import ResponseModel, UserGetQuery
 from app.schemas.user_schema import PaginatedUserResponse
@@ -17,7 +18,7 @@ def get_user_service(db: AsyncSession = Depends(get_async_session)):
 
 @router.get(
     "",
-    # dependencies=[Depends(auth_require)],
+    dependencies=[Depends(auth_require)],
     response_model=ResponseModel[PaginatedUserResponse],
 )
 async def get_all_users(

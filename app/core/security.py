@@ -54,7 +54,7 @@ def create_token(data: dict, token_type: TokenType, expire_minutes: int = TOKEN_
 
     token_key = settings.SECRET_KEY
 
-    if token_type.RESET_PASSWORD:
+    if token_type == token_type.RESET_PASSWORD:
         token_key = settings.RESET_PASSWORD_KEY
 
     return jwt.encode(

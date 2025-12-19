@@ -9,12 +9,19 @@ from sqlmodel import SQLModel
 from app.models import LeadSource, LeadStatus, LeadIndustry, LeadCompanySize, LeadTag
 
 
+class ContactNote(SQLModel):
+    id: UUID
+    note: str
+    created_at: datetime
+
+
 class Contact(SQLModel):
     id: UUID
     name: str
     email: EmailStr
     company: str
     phone: Optional[str]
+    last_contacted: Optional[ContactNote]
 
 
 class User(SQLModel):
