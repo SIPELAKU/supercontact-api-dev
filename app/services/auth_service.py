@@ -37,6 +37,7 @@ class AuthService:
     def __init__(self, db: AsyncSession):
         self.repo = UserRepository(db)
 
+    # TOKEN
     @staticmethod
     def create_access_token(user: User):
         data = {
@@ -77,8 +78,9 @@ class AuthService:
             raise AppException(
                 status_code=400,
                 code=ErrorCode.BAD_REQUEST,
-                message="Email already registered"
+                message="Email already registered",
             )
+
         if payload.password != payload.confirm_password:
             raise AppException(
                 status_code=400,
@@ -194,18 +196,22 @@ class AuthService:
 
         return None
 
+    # LOGIN (WAJIB ACTIVE)
     async def login(self, payload: UserLoginRequest):
-        user = await self.repo.get_by_email(email=payload.email)
+        user = await self.user_repo.get_by_email(payload.email)
 
-        if not user:
+        if not user or not verify_password(payload.password, user.password):
             raise AppException(
-                status_code=404, code=ErrorCode.NOT_FOUND, message="User not found"
+                status_code=401,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Invalid email or password",
             )
 
-        validate_password = verify_password(payload.password, user.password)
-        if not validate_password:
+        if not user.manage_user:
             raise AppException(
-                status_code=401, code=ErrorCode.AUTH_REQUIRED, message="Wrong password"
+                status_code=403,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Account not activated yet",
             )
 
         access_token = self.create_access_token(user)

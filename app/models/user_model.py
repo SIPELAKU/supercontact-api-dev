@@ -4,13 +4,8 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func, Boolean, text
+from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func,Boolean, text
 from sqlmodel import SQLModel, Field, Relationship
-
-
-class UserStatus(StrEnum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
 
 
 class UserPosition(StrEnum):
@@ -41,65 +36,6 @@ def otp_expired_at():
     return datetime.now(timezone.utc) + timedelta(minutes=10)
 
 
-class UserRole(SQLModel, table=True):
-    __tablename__ = "user_roles"
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    role_name: str = Field(sa_column=Column(String(20), nullable=False))
-    permission_id: Optional[UUID] = Field(foreign_key="role_permissions.id")
-
-    created_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-        ),
-    )
-
-    updated_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-            onupdate=func.now(),
-        ),
-    )
-    permission: Optional["RolePermission"] = Relationship(back_populates="roles")
-
-
-class RolePermission(SQLModel, table=True):
-    __tablename__ = "role_permissions"
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    permission_name: str = Field(sa_column=Column(String(30), nullable=False))
-
-    created_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-        ),
-    )
-
-    updated_at: datetime = Field(
-        default_factory=utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-            onupdate=func.now(),
-        ),
-    )
-    roles: List["UserRole"] = Relationship(back_populates="permission")
-
-
 class User(SQLModel, table=True):
     __tablename__ = "users"
     model_config = ConfigDict(from_attributes=True)
@@ -122,22 +58,9 @@ class User(SQLModel, table=True):
         ),
     )
     password: str = Field(sa_column=Column(Text, nullable=False))
-
     avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
     is_verified: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
-    role: Optional[UUID] = Field(foreign_key="user_roles.id")
-    status: Optional[UserStatus] = Field(
-        default=UserStatus.ACTIVE,
-        sa_column=Column(
-            Enum(
-                UserStatus,
-                name="status_enum",
-                values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-                native_enum=False
-            ),
-            nullable=False,
-        ),
-    )
+
 
     created_at: datetime = Field(
         default_factory=utc_now,
@@ -155,8 +78,9 @@ class User(SQLModel, table=True):
             nullable=False,
             server_default=func.now(),
             onupdate=func.now(),
-        )
+        ),
     )
+
     leads: List["Lead"] = Relationship(back_populates="user")
     pipelines: List["Pipeline"] = Relationship(back_populates="user")
     contact_notes: List["ContactNote"] = Relationship(back_populates="user")
@@ -165,6 +89,11 @@ class User(SQLModel, table=True):
     mailings: List["Mailing"] = Relationship(back_populates="user")
     otps: List["UserOTP"] = Relationship(back_populates="user")
     notes: List["Note"] = Relationship(back_populates="user")
+
+    manage_user: Optional["ManageUser"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"uselist": False},
+    )
 
     __table_args__ = (
         Index("idx_user_fullname", "fullname"),

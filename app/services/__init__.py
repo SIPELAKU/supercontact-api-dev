@@ -2,7 +2,10 @@ from .auth_service import AuthService
 from .contact_service import ContactService
 from .contact_service import ContactService
 from .lead_service import LeadService
+from .manage_user_service import ManageUserService
 from .pipeline_service import PipelineService
 from .product_service import ProductService
 from .quotation_service import QuotationService
 from .user_service import UserService
+from .permission_service import PermissionService
+from .department_service import DepartmentService

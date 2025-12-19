@@ -5,79 +5,77 @@ from sqlmodel import select
 
 from app.core import hash_password
 from app.db import get_async_session
-from app.models import UserStatus, UserRole, User, UserPosition
+from app.models import User, UserPosition
 
-
-# fullname: str = Field(sa_column=Column(String(255), nullable=False))
-#     email: str = Field(sa_column=Column(String(255), unique=True, nullable=False))
-#     phone: str = Field(sa_column=Column(String(255), nullable=False))
-#     company: str = Field(sa_column=Column(String(255), nullable=False))
-#     position: UserPosition = Field(
-#         sa_column=Column(
-#             Enum(
-#                 UserPosition,
-#                 name="user_position_enum",
-#                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-#                 native_enum=False
-#             ),
-#             nullable=False,
-#         ),
-#     )
-#     password: str = Field(sa_column=Column(Text, nullable=False))
-#
-#     avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
-#     is_verified: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
-#     role: Optional[UUID] = Field(foreign_key="user_roles.id")
-#     status: Optional[UserStatus] = Field(
-#         default=UserStatus.ACTIVE,
-#         sa_column=Column(
-#             Enum(
-#                 UserStatus,
-#                 name="status_enum",
-#                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-#                 native_enum=False
-#             ),
-#             nullable=False,
-#         ),
-#     )
+USERS = [
+    {
+        "fullname": "Super Admin",
+        "email": "superadmin@company.com",
+        "password": "superadmin",
+        "avatar_initial": "SA",
+        "phone": "0800000000",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Admin",
+        "email": "admin@company.com",
+        "password": "admin",
+        "avatar_initial": "AD",
+        "phone": "0811111111",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Manager",
+        "email": "manager@company.com",
+        "password": "manager",
+        "avatar_initial": "MG",
+        "phone": "0822222222",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+    {
+        "fullname": "Staff",
+        "email": "staff@company.com",
+        "password": "staff",
+        "avatar_initial": "ST",
+        "phone": "0833333333",
+        "company": "PT Supercontact",
+        "position": UserPosition.SENIOR_MANAGER,
+    },
+]
 
 
 async def seed_users():
     db_gen = get_async_session()
     db = await anext(db_gen)
-    query = await db.scalars(select(UserRole))
-    roles = query.all()
-    user_seed = [
-        {"fullname": "admin", "email": "admin@example.com", "password": hash_password("admin"), "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER, "is_verified": True},
-        {"fullname": "admin2", "email": "admin2@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER, "is_verified": True},
-        {"fullname": "admin3", "email": "admin3@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER, "is_verified": True},
-        {"fullname": "admin4", "email": "admin4@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER, "is_verified": True},
-        {"fullname": "admin5", "email": "admin5@example.com", "password": hash_password("admin"),
-         "role": roles[0].id,
-         "status": UserStatus.ACTIVE, "avatar_initial": "AD", "phone": "123123", "company": "xxxxxx",
-         "position": UserPosition.SENIOR_MANAGER, "is_verified": True},
-    ]
-
-    for user in user_seed:
-        db_user = User(**user)
-        db.add(db_user)
 
     try:
+        for data in USERS:
+            result = await db.execute(select(User).where(User.email == data["email"]))
+            existing_user = result.scalar_one_or_none()
+
+            if existing_user:
+                print(f"⚠️ User already exists: {data['email']}")
+                continue
+
+            user = User(
+                fullname=data["fullname"],
+                email=data["email"],
+                password=hash_password(data["password"]),
+                avatar_initial=data["avatar_initial"],
+                phone=data["phone"],
+                company=data["company"],
+                position=data["position"],
+            )
+
+            db.add(user)
+            print(f"User created: {data['email']}")
+
         await db.commit()
     except IntegrityError as e:
-        print(e)
-        print("Rollback")
+        print("Rollback:", e)
         await db.rollback()
     finally:
         await db.close()

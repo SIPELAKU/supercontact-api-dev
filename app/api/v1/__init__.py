@@ -7,6 +7,10 @@ from .endpoints import (
     products_router,
     quotations_router,
     userprofile_router,
+    manage_users_router,
+    roles_router,
+    permissions_router,
+    department_router,
     mailings_router,
     notes_router,
 )

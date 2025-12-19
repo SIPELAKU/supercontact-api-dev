@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.exceptions import AppException
-from app.models import UserRole, UserStatus
+from app.models import UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
@@ -122,7 +122,7 @@ async def auth_require(
         )
 
 
-def check_roles(*allowed_roles: UserRole):
+def check_roles(*allowed_roles: str):
     async def depends_auth(user: User = Depends(auth_require)):
         if user.role not in allowed_roles:
             raise AppException(

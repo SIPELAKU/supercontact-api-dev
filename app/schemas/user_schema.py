@@ -4,45 +4,52 @@ from uuid import UUID
 from pydantic import EmailStr
 from sqlmodel import SQLModel
 
-from app.models import UserRole, UserStatus
+from app.models import UserPosition
 
 
 class UserGetQuery(SQLModel):
     page: int = 1
     limit: int = 10
     search: Optional[str] = None
+    position: Optional[UserPosition] = None
 
 
 class UserBase(SQLModel):
     fullname: Optional[str] = None
     email: Optional[EmailStr] = None
-    # role: Optional[UserRole] = None
-    status: Optional[UserStatus] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    position: Optional[UserPosition] = None
 
 
+# CREATE
 class UserCreateRequest(SQLModel):
     fullname: str
     email: EmailStr
+    phone: str
+    company: str
+    position: UserPosition
     password: str
-    role: UserRole
-    status: UserStatus
 
 
+# UPDATE
 class UserUpdateRequest(SQLModel):
     fullname: Optional[str] = None
     email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    position: Optional[UserPosition] = None
     password: Optional[str] = None
-    role: Optional[UserRole] = None
-    status: Optional[UserStatus] = None
 
 
 class UserResponse(UserBase):
     id: UUID
-    avatar_initial: Optional[str] = None
+    avatar_initial: str
 
     model_config = {"from_attributes": True}
 
 
+# PAGINATION
 class PaginatedUserResponse(SQLModel):
     total: int
     page: int

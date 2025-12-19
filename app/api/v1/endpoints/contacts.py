@@ -50,13 +50,15 @@ async def get_all_contacts(
         sort_order=sort_order,
     )
     result = await service.find_all_contacts(query=query)
-    return ResponseModel(data=PaginatedContacts(
-        total=result["total"],
-        page=result["page"],
-        limit=result["limit"],
-        total_pages=result["total_pages"],
-        contacts=result["contacts"]
-    ))
+    return ResponseModel(
+        data=PaginatedContacts(
+            total=result["total"],
+            page=result["page"],
+            limit=result["limit"],
+            total_pages=result["total_pages"],
+            contacts=result["contacts"],
+        )
+    )
 
 
 @router.post(
@@ -113,6 +115,7 @@ async def delete_contact_by_id(
     return ResponseModel(data={"id": contact_id, "deleted": contact})
 
 
+# CREATE NOTES
 @router.post(
     "/{contact_id}/notes",
     response_model=ResponseModel[ContactNoteResponse],
