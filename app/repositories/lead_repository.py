@@ -36,7 +36,7 @@ class LeadRepository:
 
         # Base query: Lead join Contact join subquery
         query = (
-            select(Lead)
+            select(Lead).where(Lead.id == lead_id)
             .join(Lead.contact)
             .outerjoin(
                 last_note_subq, last_note_subq.c.contact_id == Contact.id
@@ -48,7 +48,8 @@ class LeadRepository:
                 selectinload(Lead.user) if load_user else None,
                 selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
             )
-        return await self.db.scalar(query)
+        result = await self.db.scalar(query)
+        return result
 
     async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
         # Subquery untuk last_contacted per contact
