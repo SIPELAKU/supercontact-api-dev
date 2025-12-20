@@ -14,8 +14,8 @@ class ChatMessage(SQLModel, table=True):
     __tablename__ = "chat_messages"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    sender_id: UUID = Field(sa_column=Column(PGUUID(as_uuid=True), nullable=False))
-    receiver_id: UUID = Field(sa_column=Column(PGUUID(as_uuid=True), nullable=False))
+    sender_id: UUID = Field(sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False))
+    receiver_id: UUID = Field(sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False))
     message: str = Field(sa_column=Column(Text(), nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -23,9 +23,23 @@ class ChatMessage(SQLModel, table=True):
     )
 
     # sender: "User" = Relationship(
-    #     sa_relationship_kwargs={"primaryjoin": "ChatMessage.sender_id==User.id"}
+    #     back_populates="sent_messages",
+    #     sa_relationship_kwargs={
+    #         "foreign_keys": [sender_id]
+    #     }
     # )
 
     # receiver: "User" = Relationship(
-    #     sa_relationship_kwargs={"primaryjoin": "ChatMessage.receiver_id==User.id"}
+    #     back_populates="received_messages",
+    #     sa_relationship_kwargs={
+    #         "foreign_keys": [receiver_id]
+    #     }
     # )
+
+    sender: "User" = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "ChatMessage.sender_id==User.id"}
+    )
+
+    receiver: "User" = Relationship(
+        sa_relationship_kwargs={"primaryjoin": "ChatMessage.receiver_id==User.id"}
+    )
