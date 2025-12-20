@@ -9,3 +9,4 @@ from .users import router as users_router
 from .mailings import router as mailings_router
 from .userdevice import router as userdevice_router
 from .notes import router as notes_router
+from .chat import router as chat_router
