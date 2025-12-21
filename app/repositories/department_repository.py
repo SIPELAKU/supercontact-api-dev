@@ -1,14 +1,15 @@
-from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import status
 
-from app.models.department_model import Department
 from app.models.branch_model import Branch
+from app.models.manage_user_model import ManageUser, UserLevel
+from app.schemas.branch_schema import BranchCreate, BranchUpdate
+from app.models.department_enum import DepartmentEnum
 from app.exceptions import AppException
 from app.schemas.error_schema import ErrorCode
 
@@ -19,48 +20,27 @@ class DepartmentRepository:
         self.db = db
 
     # CREATE
-    async def create_with_branches(
-        self,
-        name: str,
-        branch_names: List[str],
-    ) -> Department:
-
-        if len(branch_names) != len(set(branch_names)):
-            raise AppException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                code=ErrorCode.VALIDATION_ERROR,
-                message="Duplicate branch names are not allowed",
-            )
-
-        dept = Department(name=name)
+    async def add_branch(self, data: BranchCreate) -> Branch:
+        branch = Branch(
+            department=data.department,
+            name=data.name.strip(),
+        )
 
         try:
-            self.db.add(dept)
-            await self.db.flush()
-
-            for branch_name in branch_names:
-                self.db.add(
-                    Branch(
-                        name=branch_name,
-                        department_id=dept.id,
-                    )
-                )
-
+            self.db.add(branch)
             await self.db.commit()
-
-            result = await self.db.execute(
-                select(Department)
-                .where(Department.id == dept.id)
-                .options(selectinload(Department.branches))
-            )
-            return result.scalar_one()
+            await self.db.refresh(branch)
+            return branch
 
         except IntegrityError:
             await self.db.rollback()
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code=ErrorCode.ITEM_ALREADY_EXISTS,
-                message="Department already exists",
+                message=(
+                    f"Branch '{data.name}' already exists "
+                    f"in department '{data.department.value}'"
+                ),
             )
 
         except SQLAlchemyError as e:
@@ -71,77 +51,48 @@ class DepartmentRepository:
                 message=str(e),
             )
 
-    # READ
-    async def get_all(self) -> List[Department]:
+    # GET ALL
+    async def get_all_branches(self) -> list[Branch]:
         result = await self.db.execute(
-            select(Department).options(selectinload(Department.branches))
+            select(Branch).order_by(Branch.department, Branch.name)
         )
         return result.scalars().all()
 
-    async def get_by_id(self, department_id: UUID) -> Department:
-        result = await self.db.execute(
-            select(Department)
-            .where(Department.id == department_id)
-            .options(selectinload(Department.branches))
-        )
-        dept = result.scalar_one_or_none()
-
-        if not dept:
+    # GET BY ID
+    async def get_branch_by_id(self, branch_id: UUID) -> Branch:
+        branch = await self.db.get(Branch, branch_id)
+        if not branch:
             raise AppException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 code=ErrorCode.DATA_NOT_FOUND,
-                message="Department not found",
+                message="Branch not found",
             )
-
-        return dept
+        return branch
 
     # UPDATE
-    async def update(
-        self,
-        department_id: UUID,
-        name: Optional[str] = None,
-        new_branches: Optional[List[str]] = None,
-    ) -> Department:
+    async def update_branch(self, branch_id: UUID, data: BranchUpdate) -> Branch:
+        branch = await self.get_branch_by_id(branch_id)
 
-        dept = await self.get_by_id(department_id)
+        if data.name is not None:
+            branch.name = data.name.strip()
+
+        if data.department is not None:
+            branch.department = data.department
 
         try:
-            if name:
-                dept.name = name
-
-            if new_branches:
-                existing = {b.name for b in dept.branches}
-
-                for branch_name in new_branches:
-                    if branch_name in existing:
-                        raise AppException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            code=ErrorCode.VALIDATION_ERROR,
-                            message=f"Branch '{branch_name}' already exists",
-                        )
-
-                    self.db.add(
-                        Branch(
-                            name=branch_name,
-                            department_id=dept.id,
-                        )
-                    )
-
             await self.db.commit()
-
-            result = await self.db.execute(
-                select(Department)
-                .where(Department.id == dept.id)
-                .options(selectinload(Department.branches))
-            )
-            return result.scalar_one()
+            await self.db.refresh(branch)
+            return branch
 
         except IntegrityError:
             await self.db.rollback()
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code=ErrorCode.ITEM_ALREADY_EXISTS,
-                message="Duplicate data detected",
+                message=(
+                    f"Branch '{branch.name}' already exists "
+                    f"in department '{branch.department.value}'"
+                ),
             )
 
         except SQLAlchemyError as e:
@@ -152,9 +103,52 @@ class DepartmentRepository:
                 message=str(e),
             )
 
-    # DELETE
-    async def delete(self, department_id: UUID) -> bool:
-        dept = await self.get_by_id(department_id)
-        await self.db.delete(dept)
-        await self.db.commit()
-        return True
+    async def branch_exists(self, department: DepartmentEnum, name: str) -> bool:
+        result = await self.db.execute(
+            select(func.count(Branch.id)).where(
+                Branch.department == department,
+                func.lower(Branch.name) == name.lower(),
+            )
+        )
+        return result.scalar_one() > 0
+
+    # FILTER BY DEPARTMENT
+    async def get_branches_by_department(
+        self, department: DepartmentEnum
+    ) -> list[Branch]:
+        result = await self.db.execute(
+            select(Branch).where(Branch.department == department).order_by(Branch.name)
+        )
+        return result.scalars().all()
+
+    # FILTER BY BRANCH NAME
+    async def filter_branch(self, keyword: str) -> list[Branch]:
+        result = await self.db.execute(
+            select(Branch).where(func.lower(Branch.name).ilike(f"%{keyword.lower()}%"))
+        )
+        return result.scalars().all()
+
+    # DEPARTMENT DETAIL
+    async def get_department_detail(self, branch_id: UUID):
+        result = await self.db.execute(
+            select(Branch)
+            .where(Branch.id == branch_id)
+            .options(selectinload(Branch.manage_users).selectinload(ManageUser.user))
+        )
+
+        branch = result.scalar_one_or_none()
+        if not branch:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code=ErrorCode.DATA_NOT_FOUND,
+                message="Branch not found",
+            )
+
+        managers = [
+            mu for mu in branch.manage_users if mu.user_level == UserLevel.MANAGER
+        ]
+
+        return {
+            "branch": branch,
+            "managers": managers,
+        }

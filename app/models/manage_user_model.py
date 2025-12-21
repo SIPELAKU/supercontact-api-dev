@@ -4,16 +4,25 @@ from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Index, String, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum as SAEnum,
+    Index,
+    String,
+    func,
+    text,
+)
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from app.models.user_model import User
-    from app.models.department_model import Department
     from app.models.role_model import Role
     from app.models.branch_model import Branch
+    from app.models.department_enum import DepartmentEnum
 
 
+# ENUMS
 class UserStatus(StrEnum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
@@ -35,17 +44,15 @@ class Position(StrEnum):
 
 
 class ManageUser(SQLModel, table=True):
+
     __tablename__ = "manage_users"
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    user_id: UUID = Field(foreign_key="users.id", nullable=False)
-
-    department_id: Optional[UUID] = Field(
-        default=None,
-        foreign_key="departments.id",
-        nullable=True,
+    user_id: UUID = Field(
+        foreign_key="users.id",
+        nullable=False,
     )
 
     branch_id: Optional[UUID] = Field(
@@ -69,7 +76,7 @@ class ManageUser(SQLModel, table=True):
                 native_enum=False,
             ),
             nullable=False,
-            server_default=UserLevel.STAFF,
+            server_default=text("'Staff'"),
         )
     )
 
@@ -95,7 +102,7 @@ class ManageUser(SQLModel, table=True):
                 native_enum=False,
             ),
             nullable=False,
-            server_default=UserStatus.PENDING,
+            server_default=text("'Pending'"),
         )
     )
 
@@ -105,7 +112,10 @@ class ManageUser(SQLModel, table=True):
     )
 
     created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+        )
     )
 
     updated_at: datetime = Field(
@@ -117,12 +127,15 @@ class ManageUser(SQLModel, table=True):
     )
 
     user: "User" = Relationship(back_populates="manage_user")
-    department: Optional["Department"] = Relationship(back_populates="manage_users")
     branch: Optional["Branch"] = Relationship(back_populates="manage_users")
     role: Optional["Role"] = Relationship(back_populates="manage_users")
 
+    @property
+    def department(self) -> Optional["DepartmentEnum"]:
+
+        return self.branch.department if self.branch else None
+
     __table_args__ = (
         Index("idx_manage_user_user_id", "user_id"),
-        Index("idx_manage_user_department_id", "department_id"),
         Index("idx_manage_user_branch_id", "branch_id"),
     )

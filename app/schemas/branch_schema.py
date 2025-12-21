@@ -1,27 +1,24 @@
-from typing import Optional
 from uuid import UUID
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-from app.schemas.department_schema import DepartmentRead
+
+from app.models.department_enum import DepartmentEnum
 
 
-class BranchBase(BaseModel):
-    name: str
-
-
-class BranchCreate(BranchBase):
-    department_id: UUID = Field(...)
+class BranchCreate(BaseModel):
+    department: DepartmentEnum = Field(...)
+    name: str = Field(..., min_length=2, max_length=100)
 
 
 class BranchUpdate(BaseModel):
+    department: Optional[DepartmentEnum] = Field(None)
     name: Optional[str] = None
 
 
-class BranchRead(BranchBase):
+class BranchRead(BaseModel):
     id: UUID
+    department: DepartmentEnum
+    name: str
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class BranchReadWithDepartment(BranchRead):
-    department: Optional[DepartmentRead] = None

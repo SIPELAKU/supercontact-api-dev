@@ -12,11 +12,9 @@ from app.schemas.manage_user_schema import (
     ManageUserResponse,
     ManageUserListResponse,
 )
+from app.models.manage_user_model import UserStatus
 
-router = APIRouter(
-    prefix="/manage-users",
-    tags=["Manage Users"],
-)
+router = APIRouter(prefix="/manage-users", tags=["Manage Users"])
 
 
 # CREATE
@@ -29,81 +27,54 @@ async def create_manage_user(
     payload: ManageUserCreateRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-    return await service.create(payload)
+    return await ManageUserService(db).create(payload)
 
 
-# LIST
-@router.get(
-    "",
-    response_model=ManageUserListResponse,
-)
+# LIST + SEARCH + FILTER
+@router.get("", response_model=ManageUserListResponse)
 async def list_manage_users(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    search: Optional[str] = None,
-    role: Optional[str] = None,
-    department: Optional[str] = None,
-    branch: Optional[str] = None,
-    status: Optional[str] = None,
+    search: Optional[str] = Query(None),
+    status: Optional[UserStatus] = Query(None),
+    role_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-
-    items = await service.get_all(
+    return await ManageUserService(db).list(
         page=page,
         limit=limit,
         search=search,
-        role=role,
-        department=department,
-        branch=branch,
         status=status,
-    )
-
-    return ManageUserListResponse(
-        total=len(items),
-        items=items,
+        role_id=role_id,
     )
 
 
-# GET BY ID
-@router.get(
-    "/{id}",
-    response_model=ManageUserResponse,
-)
+# GET DETAIL
+@router.get("/{id}", response_model=ManageUserResponse)
 async def get_manage_user_detail(
     id: UUID,
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-    return await service.get_by_id(id)
+    return await ManageUserService(db).get_by_id(id)
 
 
 # UPDATE
-@router.put(
-    "/{id}",
-    response_model=ManageUserResponse,
-)
+@router.put("/{id}", response_model=ManageUserResponse)
 async def update_manage_user(
     id: UUID,
     payload: ManageUserUpdateRequest,
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-    return await service.update(id, payload)
+    return await ManageUserService(db).update(id, payload)
 
 
 # SOFT DELETE
-@router.delete(
-    "/{id}",
-    response_model=ManageUserResponse,
-)
-async def soft_delete_manage_user(
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def deactivate_manage_user(
     id: UUID,
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-    return await service.soft_delete(id)
+    await ManageUserService(db).deactivate(id)
 
 
 # HARD DELETE
@@ -115,6 +86,4 @@ async def hard_delete_manage_user(
     id: UUID,
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = ManageUserService(db)
-    await service.hard_delete(id)
-    return None
+    await ManageUserService(db).hard_delete(id)

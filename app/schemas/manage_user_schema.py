@@ -26,28 +26,30 @@ class Position(StrEnum):
     SALES_DEVELOPMENT = "Sales Development"
 
 
+# CREATE
 class ManageUserCreateRequest(BaseModel):
+
     email: EmailStr
 
-    role: Optional[str] = None
     department: Optional[str] = None
     branch: Optional[str] = None
-
-    user_level: UserLevel = UserLevel.STAFF
-    position: Optional[Position] = None
-    employee_id: Optional[str] = None
-    status: UserStatus = UserStatus.PENDING
-
-
-class ManageUserUpdateRequest(BaseModel):
     role: Optional[str] = None
-    department: Optional[str] = None
-    branch: Optional[str] = None
 
     user_level: Optional[UserLevel] = None
     position: Optional[Position] = None
-    employee_id: Optional[str] = None
     status: Optional[UserStatus] = None
+
+
+# UPDATE
+class ManageUserUpdateRequest(BaseModel):
+
+    department: str
+    branch: str
+    role: Optional[str]
+
+    user_level: UserLevel
+    position: Optional[Position]
+    status: UserStatus
 
 
 class ManageUserResponse(BaseModel):
@@ -63,6 +65,7 @@ class ManageUserResponse(BaseModel):
 
     user_level: UserLevel
     position: Optional[Position]
+
     employee_id: Optional[str]
     status: UserStatus
 

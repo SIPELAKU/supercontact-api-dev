@@ -11,13 +11,7 @@ from .auth_schema import (
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
-# BRANCH
-from .branch_schema import (
-    BranchCreate,
-    BranchUpdate,
-    BranchRead,
-    BranchReadWithDepartment,
-)
+
 # CONTACT
 from .contact_schema import (
     ContactCreate,
@@ -31,10 +25,12 @@ from .contact_schema import (
     ContactDeleteResponse,
     ContactGetQuery,
     ContactSortOrder,
-    ContactSortBy
+    ContactSortBy,
 )
+
 # ERROR
 from .error_schema import ErrorCode, ErrorResponse
+
 # LEAD
 from .lead_schema import (
     LeadResponse,
@@ -50,14 +46,17 @@ from .mailing_schema import (
     MailingDeleteResponse,
     MailingResponse,
     MailingUpdate,
-    PaginatedMailings
+    PaginatedMailings,
 )
+
 # MANAGE USER
 from .manage_user_schema import (
     ManageUserListResponse,
     ManageUserResponse,
     ManageUserCreateRequest,
     ManageUserUpdateRequest,
+    UserStatus,
+    Position,
     UserLevel,
 )
 from .note_schema import (
@@ -65,8 +64,9 @@ from .note_schema import (
     NoteUpdate,
     PaginatedNote,
     NoteResponse,
-    NoteGetQuery
+    NoteGetQuery,
 )
+
 # PIPELINE
 from .pipeline_schema import (
     PipelineRequest,
@@ -76,6 +76,7 @@ from .pipeline_schema import (
     PipelineListResponse,
     PipelineAssignedUsers,
 )
+
 # PRODUCT
 from .product_schema import (
     ProductGetQuery,
@@ -84,6 +85,7 @@ from .product_schema import (
     ProductListResponse,
     ProductDeleteResponse,
 )
+
 # QUOTATION
 from .quotation_schema import (
     QuotationItemRequest,
@@ -94,8 +96,10 @@ from .quotation_schema import (
     QuotationGetQuery,
     QuotationSendEmailResponse,
 )
+
 # RESPONSE
 from .response_schema import ResponseModel
+
 # USER
 from .user_schema import (
     UserCreateRequest,
@@ -105,20 +109,19 @@ from .user_schema import (
     PaginatedUserResponse,
     UserGetQuery,
 )
+
 # DEPARTMENT
-from .department_schema import (
-    DepartmentCreate,
-    DepartmentUpdate,
-    DepartmentRead,
-    DepartmentReadWithRelations,
-    BranchReadSimple,
-)
+# from .department_schema import (
+#     DepartmentCreate,
+#     DepartmentUpdate,
+#     DepartmentRead,
+#     DepartmentReadWithRelations,
+#     BranchReadSimple,
+# )
 
 # BRANCH
 from .branch_schema import (
     BranchCreate,
     BranchUpdate,
     BranchRead,
-    BranchReadWithDepartment,
 )
-

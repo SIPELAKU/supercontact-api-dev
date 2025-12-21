@@ -1,16 +1,17 @@
-from uuid import UUID
 from typing import List
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.session import get_async_session
 from app.services.department_service import DepartmentService
-from app.schemas.department_schema import (
-    DepartmentCreate,
-    DepartmentUpdate,
-    DepartmentReadWithRelations,
+from app.schemas.branch_schema import (
+    BranchCreate,
+    BranchUpdate,
+    BranchRead,
 )
+from app.models.department_enum import DepartmentEnum
 
 router = APIRouter(
     prefix="/departments",
@@ -18,107 +19,106 @@ router = APIRouter(
 )
 
 
-# =========================
-# CREATE DEPARTMENT
-# =========================
+# CREATE
 @router.post(
-    "",
-    response_model=DepartmentReadWithRelations,
+    "/branches",
+    response_model=BranchRead,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_department(
-    payload: DepartmentCreate,
+async def add_branch(
+    payload: BranchCreate,
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Create department + optional branches
-
-    Example payload:
-    {
-        "name": "Sales",
-        "branches": ["Jakarta", "Bandung"]
-    }
-    """
     service = DepartmentService(db)
-    return await service.create_department(payload)
+    return await service.add_branch(payload)
 
 
-# =========================
-# GET ALL DEPARTMENTS
-# =========================
+# GET ALL
 @router.get(
-    "",
-    response_model=List[DepartmentReadWithRelations],
+    "/branches",
+    response_model=List[BranchRead],
 )
-async def get_departments(
+async def get_all_branches(
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Get all departments with branches
-    """
     service = DepartmentService(db)
-    return await service.get_departments()
+    return await service.get_all_branches()
 
 
-# =========================
-# GET DEPARTMENT BY ID
-# =========================
+# GET BY ID
 @router.get(
-    "/{department_id}",
-    response_model=DepartmentReadWithRelations,
+    "/branches/{branch_id}",
+    response_model=BranchRead,
 )
-async def get_department(
-    department_id: UUID,
+async def get_branch_by_id(
+    branch_id: UUID,
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Get single department with branches
-    """
     service = DepartmentService(db)
-    return await service.get_department(department_id)
+    return await service.get_branch_by_id(branch_id)
 
 
-# =========================
-# UPDATE DEPARTMENT
-# =========================
+# UPDATE
 @router.put(
-    "/{department_id}",
-    response_model=DepartmentReadWithRelations,
+    "/branches/{branch_id}",
+    response_model=BranchRead,
 )
-async def update_department(
-    department_id: UUID,
-    payload: DepartmentUpdate,
+async def update_branch(
+    branch_id: UUID,
+    payload: BranchUpdate,
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Update department name and/or add new branches
-
-    Example payload:
-    {
-        "name": "Sales",
-        "branches": ["Surabaya", "Medan"]
-    }
-    """
     service = DepartmentService(db)
-    return await service.update_department(
-        department_id=department_id,
-        data=payload,
-    )
+    return await service.update_branch(branch_id, payload)
 
 
-# =========================
-# DELETE DEPARTMENT
-# =========================
+# DELETE BRANCH
 @router.delete(
-    "/{department_id}",
+    "/branches/{branch_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_department(
-    department_id: UUID,
+async def delete_branch(
+    branch_id: UUID,
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Delete department (branches auto deleted via cascade)
-    """
     service = DepartmentService(db)
-    await service.delete_department(department_id)
+    await service.delete_branch(branch_id)
+
+
+# GET BRANCHES BY DEPARTMENT
+@router.get(
+    "/{department}/branches",
+    response_model=List[BranchRead],
+)
+async def get_branches_by_department(
+    department: DepartmentEnum,
+    db: AsyncSession = Depends(get_async_session),
+):
+    service = DepartmentService(db)
+    return await service.get_branches_by_department(department)
+
+
+# FILTER BRANCH BY NAME
+@router.get(
+    "/branches/search",
+    response_model=List[BranchRead],
+)
+async def filter_branch(
+    q: str = Query(..., min_length=2),
+    db: AsyncSession = Depends(get_async_session),
+):
+
+    service = DepartmentService(db)
+    return await service.filter_branch(q)
+
+
+# DEPARTMENT DETAIL
+@router.get(
+    "/branches/{branch_id}/detail",
+)
+async def get_department_detail(
+    branch_id: UUID,
+    db: AsyncSession = Depends(get_async_session),
+):
+    service = DepartmentService(db)
+    return await service.get_department_detail(branch_id)

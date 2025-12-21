@@ -98,7 +98,9 @@ class UserRepository:
         await self.db.commit()
         return user_otp
 
-    async def get_active_user_otp(self, user_id: UUID, otp_type: UserOTPType) -> UserOTP:
+    async def get_active_user_otp(
+        self, user_id: UUID, otp_type: UserOTPType
+    ) -> UserOTP:
         query = (
             select(UserOTP)
             .where(UserOTP.user_id == user_id)

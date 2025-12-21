@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func,Boolean, text
+from sqlalchemy import Column, DateTime, Text, String, Enum, Index, func, Boolean, text
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -52,15 +52,17 @@ class User(SQLModel, table=True):
                 UserPosition,
                 name="user_position_enum",
                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-                native_enum=False
+                native_enum=False,
             ),
             nullable=False,
         ),
     )
     password: str = Field(sa_column=Column(Text, nullable=False))
     avatar_initial: str = Field(sa_column=Column(String(2), nullable=False))
-    is_verified: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=text("false")))
-
+    is_verified: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
+    )
 
     created_at: datetime = Field(
         default_factory=utc_now,
@@ -68,7 +70,7 @@ class User(SQLModel, table=True):
             DateTime(timezone=True),
             nullable=False,
             server_default=func.now(),
-        )
+        ),
     )
 
     updated_at: datetime = Field(
@@ -114,7 +116,7 @@ class UserOTP(SQLModel, table=True):
                 UserOTPType,
                 name="user_otp_type_enum",
                 values_callable=lambda enum_cls: [enum.value for enum in enum_cls],
-                native_enum=False
+                native_enum=False,
             ),
             nullable=False,
         ),
@@ -123,7 +125,7 @@ class UserOTP(SQLModel, table=True):
         sa_column=Column(
             DateTime(timezone=True),
             nullable=False,
-            server_default=text("now() + interval '10 minutes'")
+            server_default=text("now() + interval '10 minutes'"),
         )
     )
 
@@ -133,7 +135,7 @@ class UserOTP(SQLModel, table=True):
             DateTime(timezone=True),
             nullable=False,
             server_default=func.now(),
-        )
+        ),
     )
     updated_at: datetime = Field(
         default_factory=utc_now,
@@ -142,6 +144,6 @@ class UserOTP(SQLModel, table=True):
             nullable=False,
             server_default=func.now(),
             onupdate=func.now(),
-        )
+        ),
     )
     user: "User" = Relationship(back_populates="otps")

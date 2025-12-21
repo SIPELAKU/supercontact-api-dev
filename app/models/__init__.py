@@ -1,13 +1,12 @@
 from .branch_model import Branch
 from .contact_model import Contact, ContactTask, ContactNote
-from .department_model import Department
 from .lead_model import (
     Lead,
     LeadStatus,
     LeadSource,
     LeadTag,
     LeadIndustry,
-    LeadCompanySize
+    LeadCompanySize,
 )
 from .mailing_model import Mailing
 from .manage_user_model import ManageUser, UserStatus, UserLevel, Position
