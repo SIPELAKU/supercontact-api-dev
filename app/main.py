@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
@@ -8,7 +8,7 @@ from app.api import api_v1_router
 from app.core import settings
 from app.db import get_async_session
 from app.exceptions import AppException, app_exception_handler
-from app.schemas import ErrorCode, ResponseModel, ErrorResponse
+from app.schemas import ErrorCode, ErrorResponse, ResponseModel
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -32,15 +32,9 @@ def root():
 async def health(db=Depends(get_async_session)):
     try:
         await db.exec(text("SELECT 1"))
-        return {
-            "status": "ok",
-            "database": "connected"
-        }
+        return {"status": "ok", "database": "connected"}
     except Exception:
-        return {
-            "status": "error",
-            "database": "disconnected"
-        }
+        return {"status": "error", "database": "disconnected"}
 
 
 # ERROR HANDLER FOR AppException (404, 403, dll)
@@ -63,15 +57,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# ERROR HANDLER FOR
+# ERROR HANDLER FOR SERVER ERROR
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
+    print(exc)
     return JSONResponse(
         status_code=500,
         content=ResponseModel(
             success=False,
             error=ErrorResponse(
-                code=ErrorCode.SERVER_ERROR, message=str(exc), details={}
+                code=ErrorCode.SERVER_ERROR, message="Internal server error", details={}
             ),
         ).model_dump(),
     )
