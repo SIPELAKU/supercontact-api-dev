@@ -23,3 +23,4 @@ from .user_model import (
 )
 from .userdevice_model import UserDevice
 from .userprofile_model import UserDetail
+from .chat_model import ChatMessage

@@ -1,8 +1,8 @@
-"""initial migrations
+"""init migrations
 
-Revision ID: bf2c019c4470
+Revision ID: ee0d790169c2
 Revises: 
-Create Date: 2025-12-19 19:57:24.822280
+Create Date: 2025-12-20 22:22:30.603147
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'bf2c019c4470'
+revision: str = 'ee0d790169c2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -82,6 +82,16 @@ def upgrade() -> None:
     )
     op.create_index('idx_user_email', 'users', ['email'], unique=False)
     op.create_index('idx_user_fullname', 'users', ['fullname'], unique=False)
+    op.create_table('chat_messages',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('sender_id', sa.UUID(), nullable=False),
+    sa.Column('receiver_id', sa.UUID(), nullable=False),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['receiver_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('contact_notes',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
@@ -257,6 +267,7 @@ def downgrade() -> None:
     op.drop_table('leads')
     op.drop_table('contact_tasks')
     op.drop_table('contact_notes')
+    op.drop_table('chat_messages')
     op.drop_index('idx_user_fullname', table_name='users')
     op.drop_index('idx_user_email', table_name='users')
     op.drop_table('users')
