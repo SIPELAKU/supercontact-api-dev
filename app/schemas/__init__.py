@@ -125,3 +125,5 @@ from .branch_schema import (
     BranchUpdate,
     BranchRead,
 )
+from .userdevice_schema import ChangePasswordSchema, UserDeviceResponse
+from .userprofile_schema import UserProfileResponse, UserProfileSchema

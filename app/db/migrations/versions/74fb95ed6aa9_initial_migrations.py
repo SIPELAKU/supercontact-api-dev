@@ -1,8 +1,8 @@
-"""init schema
+"""initial migrations
 
-Revision ID: e0775de6bc5e
+Revision ID: 74fb95ed6aa9
 Revises: 
-Create Date: 2025-12-20 21:11:13.317348
+Create Date: 2025-12-21 11:56:04.997273
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e0775de6bc5e'
+revision: str = '74fb95ed6aa9'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     op.create_table('branches',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('department', sa.Enum('MARKETING', 'SALES', 'FINANCE', 'HR', name='department_enum'), nullable=False),
+    sa.Column('department', sa.Enum('Marketing', 'Sales', 'Engineering', 'Human Resources', 'Customer Support', name='department_enum', native_enum=False), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('department', 'name', name='uq_department_branch')
     )
@@ -205,6 +205,9 @@ def upgrade() -> None:
     op.create_table('user_details',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('fullname', sa.String(length=255), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('company', sa.String(length=255), nullable=False),
     sa.Column('country', sa.String(length=255), nullable=False),
     sa.Column('language', sa.String(length=255), nullable=False),
     sa.Column('phone', sa.String(length=255), nullable=False),
@@ -213,8 +216,22 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email')
+    )
+    op.create_table('user_devices',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('browser', sa.String(length=255), nullable=False),
+    sa.Column('device', sa.String(length=255), nullable=False),
+    sa.Column('location', sa.String(length=255), nullable=True),
+    sa.Column('last_activity', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_user_devices_user_id'), 'user_devices', ['user_id'], unique=False)
     op.create_table('user_otps',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
@@ -260,6 +277,8 @@ def downgrade() -> None:
     op.drop_table('quotation_items')
     op.drop_table('quotations')
     op.drop_table('user_otps')
+    op.drop_index(op.f('ix_user_devices_user_id'), table_name='user_devices')
+    op.drop_table('user_devices')
     op.drop_table('user_details')
     op.drop_table('role_permission')
     op.drop_table('pipelines')

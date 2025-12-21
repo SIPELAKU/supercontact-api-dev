@@ -91,6 +91,7 @@ class User(SQLModel, table=True):
     mailings: List["Mailing"] = Relationship(back_populates="user")
     otps: List["UserOTP"] = Relationship(back_populates="user")
     notes: List["Note"] = Relationship(back_populates="user")
+    device: List["UserDevice"] = Relationship(back_populates="user")
 
     manage_user: Optional["ManageUser"] = Relationship(
         back_populates="user",

@@ -24,69 +24,32 @@ class LeadRepository:
         return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
 
     async def get_by_id(self, lead_id: UUID, load_user: bool = False, load_contact: bool = False):
-        query = select(Lead).where(Lead.id == lead_id)
-        if load_user:
-            query = query.options(selectinload(Lead.user))
-        if load_contact:
-            query = query.options(selectinload(Lead.contact))
-        return await self.db.scalar(query)
+        # Subquery untuk last_contacted per contact
+        last_note_subq = (
+            select(
+                ContactNote.contact_id,
+                func.max(ContactNote.created_at).label("last_contacted")
+            )
+            .group_by(ContactNote.contact_id)
+            .subquery()
+        )
 
-    # async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
-    #     query = (
-    #         select(Lead)
-    #         .join(Lead.contact)
-    #         .join(Contact.notes)
-    #     )
-    #
-    #     # Load Relationship
-    #     if load_user:
-    #         query = query.options(selectinload(Lead.user))
-    #     # GET LAST CONTACTED IN FIELD CREATED AT CONTACT NOTES
-    #     if load_contact:
-    #         query = query.options(
-    #             selectinload(Lead.contact).selectinload(Contact.notes)
-    #         )
-    #
-    #     # FILTERING
-    #     if query_params.lead_status:
-    #         query = query.where(Lead.lead_status.in_(query_params.lead_status))
-    #     if query_params.lead_source:
-    #         query = query.where(Lead.lead_source.in_(query_params.lead_source))
-    #     if query_params.assigned_to:
-    #         query = query.where(Lead.assigned_to.in_(query_params.assigned_to))
-    #
-    #     # DATE RANGE
-    #     # if query_params.date_from:
-    #     #     query = query.where(
-    #     #         Contact.last_contacted >= datetime.combine(query_params.date_from, datetime.min.time()))
-    #     # if query_params.date_to:
-    #     #     query = query.where(
-    #     #         Contact.last_contacted <= datetime.combine(query_params.date_to, datetime.min.time()))
-    #
-    #     # SEARCH BY LEAD NAME
-    #     if query_params.search:
-    #         query = (
-    #             query
-    #             .join(Lead.contact)
-    #             .where(Contact.name.ilike(f"%{query_params.search}%"))
-    #         )
-    #
-    #     # SORTING BY CREATED_AT
-    #     if query_params.sort_order == SortOrder.DESC:
-    #         query = query.order_by(desc(Lead.created_at))
-    #     else:
-    #         query = query.order_by(asc(Lead.created_at))
-    #
-    #     # PAGINATION
-    #     offset = (query_params.page - 1) * query_params.limit
-    #     query = query.offset(offset).limit(query_params.limit)
-    #     result = await self.db.scalars(query)
-    #     leads = result.all()
-    #
-    #     total_query = select(func.count()).select_from(query.subquery())
-    #     total = await self.db.scalar(total_query)
-    #
-    #     return leads, total
+        # Base query: Lead join Contact join subquery
+        query = (
+            select(Lead).where(Lead.id == lead_id)
+            .join(Lead.contact)
+            .outerjoin(
+                last_note_subq, last_note_subq.c.contact_id == Contact.id
+            )
+        )
+        # Load relationships if needed
+        if load_user or load_contact:
+            query = query.options(
+                selectinload(Lead.user) if load_user else None,
+                selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
+            )
+        result = await self.db.scalar(query)
+        return result
 
     async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
         # Subquery untuk last_contacted per contact
@@ -134,10 +97,6 @@ class LeadRepository:
         else:
             query = query.order_by(asc(Lead.created_at))
 
-        # Pagination
-        offset = (query_params.page - 1) * query_params.limit
-        query = query.offset(offset).limit(query_params.limit)
-
         # Load relationships if needed
         if load_user or load_contact:
             query = query.options(
@@ -145,12 +104,16 @@ class LeadRepository:
                 selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
             )
 
-        result = await self.db.scalars(query)
-        leads = result.all()
-
         # Total count
         total_query = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(total_query)
+
+        # Pagination
+        offset = (query_params.page - 1) * query_params.limit
+        query = query.offset(offset).limit(query_params.limit)
+
+        result = await self.db.scalars(query)
+        leads = result.all()
 
         return leads, total
 

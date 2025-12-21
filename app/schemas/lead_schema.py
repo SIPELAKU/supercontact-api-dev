@@ -60,7 +60,7 @@ class LeadRequest(SQLModel):
     lead_source: LeadSource
     assigned_to: UUID
     tag: LeadTag
-    notes: str
+    notes: Optional[str]
 
 
 class LeadResponse(SQLModel):
@@ -73,7 +73,7 @@ class LeadResponse(SQLModel):
     lead_source: LeadSource
     assigned_to: UUID
     tag: LeadTag
-    notes: str
+    notes: Optional[str]
     created_at: datetime
     updated_at: datetime
     contact: Optional[Contact]

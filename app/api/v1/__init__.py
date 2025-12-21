@@ -12,6 +12,7 @@ from .endpoints import (
     permissions_router,
     department_router,
     mailings_router,
+    userdevice_router,
     notes_router,
 )
 

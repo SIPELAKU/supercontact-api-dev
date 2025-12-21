@@ -22,4 +22,5 @@ from .user_model import (
     UserOTP,
     UserOTPType,
 )
+from .userdevice_model import UserDevice
 from .userprofile_model import UserDetail
