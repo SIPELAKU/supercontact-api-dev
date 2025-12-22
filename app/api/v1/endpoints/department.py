@@ -13,21 +13,19 @@ from app.schemas.branch_schema import (
     BranchRead,
 )
 from app.models.department_enum import DepartmentEnum
+from app.utils.permissions import require_permissions
 
 router = APIRouter(
     prefix="/departments",
     tags=["Departments"],
 )
 
-# =========================
-# BRANCH CRUD
-# =========================
-
 
 @router.post(
     "/branches",
     response_model=BranchRead,
     status_code=status.HTTP_201_CREATED,
+    # dependencies=[Depends(require_permissions("department:branch:create"))],
 )
 async def add_branch(
     payload: BranchCreate,
@@ -40,6 +38,7 @@ async def add_branch(
 @router.get(
     "/branches",
     response_model=List[BranchRead],
+    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_all_branches(
     db: AsyncSession = Depends(get_async_session),
@@ -51,6 +50,7 @@ async def get_all_branches(
 @router.get(
     "/branches/{branch_id}",
     response_model=BranchRead,
+    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_branch_by_id(
     branch_id: UUID,
@@ -63,6 +63,7 @@ async def get_branch_by_id(
 @router.put(
     "/branches/{branch_id}",
     response_model=BranchRead,
+    # dependencies=[Depends(require_permissions("department:branch:update"))],
 )
 async def update_branch(
     branch_id: UUID,
@@ -76,6 +77,7 @@ async def update_branch(
 @router.delete(
     "/branches/{branch_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    # dependencies=[Depends(require_permissions("department:branch:delete"))],
 )
 async def delete_branch(
     branch_id: UUID,
@@ -85,14 +87,11 @@ async def delete_branch(
     await service.delete_branch(branch_id)
 
 
-# =========================
 # FILTER & GROUPING
-# =========================
-
-
 @router.get(
     "/{department}/branches",
     response_model=List[BranchRead],
+    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_branches_by_department(
     department: DepartmentEnum,
@@ -105,6 +104,7 @@ async def get_branches_by_department(
 @router.get(
     "/branches/search",
     response_model=List[BranchRead],
+    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def filter_branch(
     q: str = Query(..., min_length=2),
@@ -114,27 +114,16 @@ async def filter_branch(
     return await service.filter_branch(q)
 
 
-# =========================
-# DEPARTMENT DETAIL (FIXED)
-# =========================
-
-
+# DEPARTMENT DETAIL
 @router.get(
     "/{department}/detail",
+    # dependencies=[Depends(require_permissions("department:detail:view"))],
 )
 async def get_department_detail(
     department: DepartmentEnum,
     branch_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Department Detail Page
-
-    - Filter by Department
-    - Optional filter by Branch
-    - ONLY ACTIVE STAFF
-    - Query langsung ke database (no in-memory filtering)
-    """
 
     service = DepartmentDetailService(db)
 

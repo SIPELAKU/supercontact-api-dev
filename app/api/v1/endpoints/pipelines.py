@@ -8,15 +8,24 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_async_session
 from app.models import User, DealStage
-from app.schemas import ResponseModel, PipelineRequest, PipelineResponse, PipelineUpdateStage, \
-    PipelineAssignedUsers, PipelineGetQuery
+from app.schemas import (
+    ResponseModel,
+    PipelineRequest,
+    PipelineResponse,
+    PipelineUpdateStage,
+    PipelineAssignedUsers,
+    PipelineGetQuery,
+)
 from app.schemas.pipeline_schema import PipelineListResponse
 from app.services import PipelineService
+from app.utils.permissions import require_permissions
 
 router = APIRouter(prefix="/pipelines", tags=["Pipelines"])
 
 
-def get_pipeline_service(db: AsyncSession = Depends(get_async_session)):
+def get_pipeline_service(
+    db: AsyncSession = Depends(get_async_session),
+):
     return PipelineService(db)
 
 
@@ -24,15 +33,15 @@ def get_pipeline_service(db: AsyncSession = Depends(get_async_session)):
 @router.get(
     "",
     response_model=ResponseModel[PipelineListResponse],
-    # dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(require_permissions("pipeline:view"))],
 )
 async def get_all_pipelines(
-        date_from: Optional[datetime] = Query(None),
-        date_to: Optional[datetime] = Query(None),
-        search: Optional[str] = Query(None),
-        deal_stage: Optional[List[DealStage]] = Query(None),
-        assigned_to: Optional[List[UUID]] = Query(None),
-        service: PipelineService = Depends(get_pipeline_service)
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    search: Optional[str] = Query(None),
+    deal_stage: Optional[List[DealStage]] = Query(None),
+    assigned_to: Optional[List[UUID]] = Query(None),
+    service: PipelineService = Depends(get_pipeline_service),
 ):
     query_params = PipelineGetQuery(
         deal_stage=deal_stage,
@@ -41,6 +50,7 @@ async def get_all_pipelines(
         search=search,
         assigned_to=assigned_to,
     )
+
     data = await service.find_all_pipelines(query_params=query_params)
     return ResponseModel(data=PipelineListResponse(**data))
 
@@ -49,10 +59,10 @@ async def get_all_pipelines(
 @router.get(
     "/active-users",
     response_model=ResponseModel[PipelineAssignedUsers],
-    #     dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(require_permissions("pipeline:view"))],
 )
 async def get_active_assigned_users(
-        service: PipelineService = Depends(get_pipeline_service)
+    service: PipelineService = Depends(get_pipeline_service),
 ):
     data = await service.find_active_assigned_users()
     return ResponseModel(data=PipelineAssignedUsers(**data))
@@ -62,58 +72,68 @@ async def get_active_assigned_users(
 @router.get(
     "/{pipeline_id}",
     response_model=ResponseModel[PipelineResponse],
-    #     dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(require_permissions("pipeline:view"))],
 )
 async def get_pipeline_by_id(
-        pipeline_id: UUID,
-        service: PipelineService = Depends(get_pipeline_service)
+    pipeline_id: UUID,
+    service: PipelineService = Depends(get_pipeline_service),
 ):
     data = await service.find_one_pipeline(pipeline_id=pipeline_id)
     return ResponseModel(data=data)
 
 
-# CREATE NEW PIPELINE
+# CREATE
 @router.post(
     "",
     response_model=ResponseModel[PipelineResponse],
+    # dependencies=[Depends(require_permissions("pipeline:create"))],
 )
 async def create_new_pipeline(
-        payload: PipelineRequest,
-        # current_user=Depends(auth_require),
-        db: AsyncSession = Depends(get_async_session),
-        service: PipelineService = Depends(get_pipeline_service),
+    payload: PipelineRequest,
+    db: AsyncSession = Depends(get_async_session),
+    service: PipelineService = Depends(get_pipeline_service),
 ):
     query = await db.scalars(select(User))
     users = query.all()
-    data = await service.create_pipeline(user_id=users[0].id, payload=payload)
+
+    data = await service.create_pipeline(
+        user_id=users[0].id,
+        payload=payload,
+    )
     return ResponseModel(data=data)
 
 
-# UPDATE OLD PIPELINE
+# UPDATE
 @router.put(
     "/{pipeline_id}",
     response_model=ResponseModel[PipelineResponse],
-    #     dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(require_permissions("pipeline:update"))],
 )
 async def update_pipeline_by_id(
-        pipeline_id: UUID,
-        payload: PipelineRequest,
-        service: PipelineService = Depends(get_pipeline_service)
+    pipeline_id: UUID,
+    payload: PipelineRequest,
+    service: PipelineService = Depends(get_pipeline_service),
 ):
-    data = await service.update_pipeline(pipeline_id=pipeline_id, payload=payload)
+    data = await service.update_pipeline(
+        pipeline_id=pipeline_id,
+        payload=payload,
+    )
     return ResponseModel(data=data)
 
 
-# UPDATE OLD PIPELINE
+# UPDATE DEAL STAGE
 @router.patch(
     "/{pipeline_id}/stage",
     response_model=ResponseModel[PipelineResponse],
-    #     dependencies=[Depends(auth_require)],
+    # dependencies=[Depends(require_permissions("pipeline:stage:update"))],
 )
 async def update_deal_stage_pipeline(
-        pipeline_id: UUID,
-        payload: PipelineUpdateStage,
-        service: PipelineService = Depends(get_pipeline_service)
+    pipeline_id: UUID,
+    payload: PipelineUpdateStage,
+    service: PipelineService = Depends(get_pipeline_service),
 ):
-    data = await service.update_deal_stage(pipeline_id=pipeline_id, payload=payload)
+    data = await service.update_deal_stage(
+        pipeline_id=pipeline_id,
+        payload=payload,
+    )
     return ResponseModel(data=data)

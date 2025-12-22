@@ -13,15 +13,17 @@ from app.schemas.manage_user_schema import (
     ManageUserListResponse,
 )
 from app.models.manage_user_model import UserStatus
+from app.utils.permissions import require_permissions
 
 router = APIRouter(prefix="/manage-users", tags=["Manage Users"])
 
 
-# CREATE
+# CREATE USER
 @router.post(
     "",
     response_model=ManageUserResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permissions("user:create"))],
 )
 async def create_manage_user(
     payload: ManageUserCreateRequest,
@@ -31,7 +33,11 @@ async def create_manage_user(
 
 
 # LIST + SEARCH + FILTER
-@router.get("", response_model=ManageUserListResponse)
+@router.get(
+    "",
+    response_model=ManageUserListResponse,
+    dependencies=[Depends(require_permissions("user:view"))],
+)
 async def list_manage_users(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
@@ -50,7 +56,11 @@ async def list_manage_users(
 
 
 # GET DETAIL
-@router.get("/{id}", response_model=ManageUserResponse)
+@router.get(
+    "/{id}",
+    response_model=ManageUserResponse,
+    dependencies=[Depends(require_permissions("user:view"))],
+)
 async def get_manage_user_detail(
     id: UUID,
     db: AsyncSession = Depends(get_async_session),
@@ -58,8 +68,12 @@ async def get_manage_user_detail(
     return await ManageUserService(db).get_by_id(id)
 
 
-# UPDATE
-@router.put("/{id}", response_model=ManageUserResponse)
+# UPDATE USER
+@router.put(
+    "/{id}",
+    response_model=ManageUserResponse,
+    dependencies=[Depends(require_permissions("user:update"))],
+)
 async def update_manage_user(
     id: UUID,
     payload: ManageUserUpdateRequest,
@@ -69,7 +83,11 @@ async def update_manage_user(
 
 
 # SOFT DELETE
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permissions("user:deactivate"))],
+)
 async def deactivate_manage_user(
     id: UUID,
     db: AsyncSession = Depends(get_async_session),
@@ -81,6 +99,7 @@ async def deactivate_manage_user(
 @router.delete(
     "/{id}/force",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permissions("user:delete"))],
 )
 async def hard_delete_manage_user(
     id: UUID,
