@@ -1,6 +1,8 @@
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_db_session
@@ -8,13 +10,13 @@ from app.exceptions import AppException
 from app.models import QuotationStatus
 from app.schemas import (
     ErrorCode,
+    QuotationGetQuery,
     QuotationListResponse,
     QuotationRequest,
     QuotationResponse,
     QuotationSendEmailResponse,
     ResponseModel,
 )
-from app.schemas.quotation_schema import QuotationGetQuery
 from app.services import QuotationService
 
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
@@ -32,9 +34,22 @@ async def get_quotation_service(
     # dependencies=[Depends(require_permissions("quotation:view"))],
 )
 async def get_all_quotations(
-    query_params: QuotationGetQuery = Depends(),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    search: Optional[str] = Query(None),
+    quotation_status: Optional[list[QuotationStatus]] = Query(None),
     service: QuotationService = Depends(get_quotation_service),
 ):
+    query_params = QuotationGetQuery(
+        page=page,
+        limit=limit,
+        date_from=date_from,
+        date_to=date_to,
+        search=search,
+        quotation_status=quotation_status,
+    )
     data = await service.find_all_quotations(query_params=query_params)
     return ResponseModel(data=data)
 

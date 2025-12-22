@@ -1,15 +1,15 @@
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, or_
+from sqlmodel import func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import AppException
-from app.models import Quotation, Lead, QuotationItem, Contact, Product, QuotationStatus
-from app.schemas import QuotationGetQuery, QuotationRequest, ErrorCode
-from app.utils import get_next_sequence, PrefixSequence
+from app.models import Contact, Lead, Product, Quotation, QuotationItem, QuotationStatus
+from app.schemas import ErrorCode, QuotationGetQuery, QuotationRequest
+from app.utils import PrefixSequence, get_next_sequence
 
 
 class QuotationRepository:
@@ -27,9 +27,7 @@ class QuotationRepository:
                 selectinload(Quotation.lead).options(
                     selectinload(Lead.contact),
                 ),
-                selectinload(Quotation.lead).options(
-                    selectinload(Lead.user)
-                )
+                selectinload(Quotation.lead).options(selectinload(Lead.user)),
             )
         )
         return await self.db.scalar(query)
@@ -39,7 +37,9 @@ class QuotationRepository:
 
     async def create(self, payload: QuotationRequest, status: QuotationStatus):
         grand_total = 0
-        year, quo_seq = await get_next_sequence(prefix=PrefixSequence.QUOTATION, db=self.db)
+        year, quo_seq = await get_next_sequence(
+            prefix=PrefixSequence.QUOTATION, db=self.db
+        )
         quotation_number = f"QUO-{year}-{quo_seq:03d}"
         quotation = Quotation(
             lead_id=payload.lead_id,
@@ -56,11 +56,17 @@ class QuotationRepository:
         for item in payload.items:
             product = await self.get_product_by_id(item.product_id)
             if not product:
-                raise AppException(status_code=404, code=ErrorCode.NOT_FOUND, message="Product not found")
+                raise AppException(
+                    status_code=404,
+                    code=ErrorCode.NOT_FOUND,
+                    message="Product not found",
+                )
 
             unit_price = product.price
             subtotal = unit_price * item.quantity
-            grand_total += subtotal * (Decimal("1") - (Decimal(item.discount) / Decimal("100")))
+            grand_total += subtotal * (
+                Decimal("1") - (Decimal(item.discount) / Decimal("100"))
+            )
 
             quotation_item = QuotationItem(
                 quotation_id=quotation.id,
@@ -91,21 +97,32 @@ class QuotationRepository:
                     selectinload(QuotationItem.product)
                 ),
                 selectinload(Quotation.lead).options(
-                    selectinload(Lead.contact),
-                    selectinload(Lead.user)
-                )
+                    selectinload(Lead.contact), selectinload(Lead.user)
+                ),
             )
         )
 
         # SEARCH NAME
         if query_params.search:
-            search = f'%{query_params.search}%'
+            search = f"%{query_params.search}%"
             query = query.where(
                 or_(
                     Contact.name.ilike(search),
                     Contact.company.ilike(search),
                 )
             )
+
+        # Filtering
+        if query_params.quotation_status:
+            query = query.where(
+                Quotation.quotation_status.in_(query_params.quotation_status)
+            )
+
+        # DATE RANGE FILTERING
+        if query_params.date_from:
+            query = query.where(Quotation.expire_date >= query_params.date_from)
+        if query_params.date_to:
+            query = query.where(Quotation.expire_date <= query_params.date_to)
 
         # COUNT
         total_data = select(func.count()).select_from(query.subquery())
@@ -118,7 +135,9 @@ class QuotationRepository:
 
         return quotations, total
 
-    async def update(self, quotation: Quotation, payload: QuotationRequest, status: QuotationStatus):
+    async def update(
+        self, quotation: Quotation, payload: QuotationRequest, status: QuotationStatus
+    ):
         grand_total = 0
         # UPDATE FIELD PARENT
         quotation.lead_id = payload.lead_id
@@ -127,8 +146,7 @@ class QuotationRepository:
         quotation.quotation_status = status
 
         old_items = await self.db.scalars(
-            select(QuotationItem)
-            .where(QuotationItem.quotation_id == quotation.id)
+            select(QuotationItem).where(QuotationItem.quotation_id == quotation.id)
         )
         old_items = old_items.all()
         # DELETE OLD ITEMS
@@ -140,7 +158,11 @@ class QuotationRepository:
         for item in payload.items:
             product = await self.get_product_by_id(item.product_id)
             if not product:
-                raise AppException(status_code=404, code=ErrorCode.NOT_FOUND, message="Product not found")
+                raise AppException(
+                    status_code=404,
+                    code=ErrorCode.NOT_FOUND,
+                    message="Product not found",
+                )
 
             unit_price = product.price
             subtotal = unit_price * item.quantity

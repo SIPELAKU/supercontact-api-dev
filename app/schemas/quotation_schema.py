@@ -1,10 +1,9 @@
-from datetime import datetime, date
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import Query
 from pydantic import EmailStr
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 from app.models import QuotationStatus
 
@@ -37,11 +36,12 @@ class Lead(SQLModel):
 
 
 class QuotationGetQuery(SQLModel):
-    page: int = Query(1, ge=1)
-    limit: int = Query(10, ge=1, le=100)
-    date_from: Optional[date] = Query(None)
-    date_to: Optional[date] = Query(None)
-    search: Optional[str] = Query(None)
+    page: int = 1
+    limit: int = 10
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    search: Optional[str] = None
+    quotation_status: Optional[List[QuotationStatus]] = None
 
 
 class QuotationItemRequest(SQLModel):

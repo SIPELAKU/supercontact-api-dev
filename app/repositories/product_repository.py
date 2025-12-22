@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlmodel import select, func
+from sqlmodel import func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Product
-from app.schemas import ProductRequest, ProductGetQuery
+from app.schemas import ProductGetQuery, ProductRequest
 
 
 class ProductRepository:
@@ -29,7 +29,12 @@ class ProductRepository:
 
         # SEARCH NAME
         if query_params.search:
-            query = query.where(Product.product_name.ilike(f"%{query_params.search}%"))
+            query = query.where(
+                or_(
+                    Product.product_name.ilike(f"%{query_params.search}%"),
+                    Product.sku.ilike(f"%{query_params.search}%"),
+                )
+            )
 
         total_data = select(func.count()).select_from(query.subquery())
         total = await self.db.scalar(total_data)

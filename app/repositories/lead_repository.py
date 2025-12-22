@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func, desc, asc
+from sqlmodel import asc, desc, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import User, Lead, Contact, ContactNote
-from app.schemas import LeadRequest, LeadUpdateStatus, LeadGetQuery, SortOrder
+from app.models import Contact, ContactNote, Lead, User
+from app.schemas import LeadGetQuery, LeadRequest, LeadUpdateStatus, SortOrder
 
 
 class LeadRepository:
@@ -16,19 +16,25 @@ class LeadRepository:
     async def get_by_assigned_to(self, assigned_to: UUID):
         return await self.db.get(User, assigned_to)
 
-    async def create(self, payload: LeadRequest, load_user: bool = False, load_contact: bool = False):
+    async def create(
+        self, payload: LeadRequest, load_user: bool = False, load_contact: bool = False
+    ):
         lead = Lead(**payload.model_dump())
         self.db.add(lead)
         await self.db.commit()
         await self.db.refresh(lead)
-        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
+        return await self.get_by_id(
+            lead_id=lead.id, load_user=load_user, load_contact=load_contact
+        )
 
-    async def get_by_id(self, lead_id: UUID, load_user: bool = False, load_contact: bool = False):
+    async def get_by_id(
+        self, lead_id: UUID, load_user: bool = False, load_contact: bool = False
+    ):
         # Subquery untuk last_contacted per contact
         last_note_subq = (
             select(
                 ContactNote.contact_id,
-                func.max(ContactNote.created_at).label("last_contacted")
+                func.max(ContactNote.created_at).label("last_contacted"),
             )
             .group_by(ContactNote.contact_id)
             .subquery()
@@ -36,27 +42,33 @@ class LeadRepository:
 
         # Base query: Lead join Contact join subquery
         query = (
-            select(Lead).where(Lead.id == lead_id)
+            select(Lead)
+            .where(Lead.id == lead_id)
             .join(Lead.contact)
-            .outerjoin(
-                last_note_subq, last_note_subq.c.contact_id == Contact.id
-            )
+            .outerjoin(last_note_subq, last_note_subq.c.contact_id == Contact.id)
         )
         # Load relationships if needed
         if load_user or load_contact:
             query = query.options(
                 selectinload(Lead.user) if load_user else None,
-                selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
+                selectinload(Lead.contact).selectinload(Contact.notes)
+                if load_contact
+                else None,
             )
         result = await self.db.scalar(query)
         return result
 
-    async def get_all(self, query_params: LeadGetQuery, load_user: bool = False, load_contact: bool = False):
+    async def get_all(
+        self,
+        query_params: LeadGetQuery,
+        load_user: bool = False,
+        load_contact: bool = False,
+    ):
         # Subquery untuk last_contacted per contact
         last_note_subq = (
             select(
                 ContactNote.contact_id,
-                func.max(ContactNote.created_at).label("last_contacted")
+                func.max(ContactNote.created_at).label("last_contacted"),
             )
             .group_by(ContactNote.contact_id)
             .subquery()
@@ -66,9 +78,7 @@ class LeadRepository:
         query = (
             select(Lead)
             .join(Lead.contact)
-            .outerjoin(
-                last_note_subq, last_note_subq.c.contact_id == Contact.id
-            )
+            .outerjoin(last_note_subq, last_note_subq.c.contact_id == Contact.id)
         )
 
         # Filtering
@@ -81,15 +91,15 @@ class LeadRepository:
 
         if query_params.date_from:
             query = query.where(
-                last_note_subq.c.last_contacted >= datetime.combine(query_params.date_from, datetime.min.time())
+                last_note_subq.c.last_contacted >= query_params.date_from
             )
         if query_params.date_to:
-            query = query.where(
-                last_note_subq.c.last_contacted <= datetime.combine(query_params.date_to, datetime.max.time())
-            )
+            query = query.where(last_note_subq.c.last_contacted <= query_params.date_to)
 
         if query_params.search:
-            query = query.join(Lead.contact).where(Contact.name.ilike(f"%{query_params.search}%"))
+            query = query.join(Lead.contact).where(
+                Contact.name.ilike(f"%{query_params.search}%")
+            )
 
         # Sorting
         if query_params.sort_order == SortOrder.DESC:
@@ -101,7 +111,9 @@ class LeadRepository:
         if load_user or load_contact:
             query = query.options(
                 selectinload(Lead.user) if load_user else None,
-                selectinload(Lead.contact).selectinload(Contact.notes) if load_contact else None
+                selectinload(Lead.contact).selectinload(Contact.notes)
+                if load_contact
+                else None,
             )
 
         # Total count
@@ -117,7 +129,13 @@ class LeadRepository:
 
         return leads, total
 
-    async def update(self, lead: Lead, payload: LeadRequest, load_user: bool = False, load_contact: bool = False):
+    async def update(
+        self,
+        lead: Lead,
+        payload: LeadRequest,
+        load_user: bool = False,
+        load_contact: bool = False,
+    ):
         update_data = payload.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
@@ -127,14 +145,16 @@ class LeadRepository:
         await self.db.commit()
         await self.db.refresh(lead)
 
-        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
+        return await self.get_by_id(
+            lead_id=lead.id, load_user=load_user, load_contact=load_contact
+        )
 
     async def update_status(
-            self,
-            lead: Lead,
-            payload: LeadUpdateStatus,
-            load_user: bool = False,
-            load_contact: bool = False
+        self,
+        lead: Lead,
+        payload: LeadUpdateStatus,
+        load_user: bool = False,
+        load_contact: bool = False,
     ):
         lead.lead_status = payload.lead_status
         lead.updated_at = datetime.now(timezone.utc)
@@ -142,7 +162,9 @@ class LeadRepository:
         await self.db.commit()
         await self.db.refresh(lead)
 
-        return await self.get_by_id(lead_id=lead.id, load_user=load_user, load_contact=load_contact)
+        return await self.get_by_id(
+            lead_id=lead.id, load_user=load_user, load_contact=load_contact
+        )
 
     async def delete(self, lead: Lead):
         await self.db.delete(lead)
