@@ -26,12 +26,6 @@ class DepartmentDetailService:
         search: Optional[str] = None,
         status: Optional[UserStatus] = None,
     ):
-        """
-        Department detail with:
-        - filter branch
-        - search user
-        - filter user status
-        """
 
         branch = None
         if branch_id:

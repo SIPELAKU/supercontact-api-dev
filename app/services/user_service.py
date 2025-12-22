@@ -30,19 +30,19 @@ class UserService:
                 message="Invalid email or password",
             )
 
-        if not user.manage_user:
-            raise AppException(
-                code=ErrorCode.AUTH_REQUIRED,
-                status_code=403,
-                message="Account not activated yet",
-            )
+        # if not user.manage_user:
+        #     raise AppException(
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         status_code=403,
+        #         message="Account not activated yet",
+        #     )
 
-        if user.manage_user.status != UserStatus.ACTIVE:
-            raise AppException(
-                code=ErrorCode.AUTH_REQUIRED,
-                status_code=403,
-                message="Account is not active",
-            )
+        # if user.manage_user.status != UserStatus.ACTIVE:
+        #     raise AppException(
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         status_code=403,
+        #         message="Account is not active",
+        #     )
 
         return user
 

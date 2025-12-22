@@ -18,9 +18,7 @@ class DepartmentRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    # =========================
     # CREATE
-    # =========================
     async def add_branch(self, data: BranchCreate) -> Branch:
         branch = Branch(
             department=data.department,
@@ -52,9 +50,7 @@ class DepartmentRepository:
                 message=str(e),
             )
 
-    # =========================
-    # GET ALL + FILTER + SEARCH (🔥)
-    # =========================
+    # GET ALL
     async def get_branches(
         self,
         *,
@@ -75,9 +71,7 @@ class DepartmentRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    # =========================
     # GET BY ID
-    # =========================
     async def get_branch_by_id(self, branch_id: UUID) -> Branch:
         branch = await self.db.get(Branch, branch_id)
         if not branch:
@@ -88,9 +82,7 @@ class DepartmentRepository:
             )
         return branch
 
-    # =========================
     # UPDATE
-    # =========================
     async def update_branch(self, branch_id: UUID, data: BranchUpdate) -> Branch:
         branch = await self.get_branch_by_id(branch_id)
 
@@ -116,9 +108,7 @@ class DepartmentRepository:
                 ),
             )
 
-    # =========================
     # DELETE
-    # =========================
     async def delete_branch(self, branch_id: UUID):
         branch = await self.get_branch_by_id(branch_id)
         await self.db.delete(branch)

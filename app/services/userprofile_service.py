@@ -27,7 +27,6 @@ class UserProfileService:
             fullname=user.fullname,
             email=user.email,
             avatar_initial=user.avatar_initial,
-            status=user.status.value if user.status else None,
             role=getattr(user, "role_name", None),
             joined_date=user.created_at,
 

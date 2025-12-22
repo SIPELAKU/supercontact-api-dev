@@ -234,20 +234,20 @@ class AuthService:
                 message="Invalid email or password",
             )
 
-        # 🔥 FIX UTAMA DI SINI
-        if not user.manage_user:
-            raise AppException(
-                status_code=403,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="Account not activated yet",
-            )
+        # # 🔥 FIX UTAMA DI SINI
+        # if not user.manage_user:
+        #     raise AppException(
+        #         status_code=403,
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         message="Account not activated yet",
+        #     )
 
-        if user.manage_user.status != UserStatus.ACTIVE:
-            raise AppException(
-                status_code=403,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="Account is not active",
-            )
+        # if user.manage_user.status != UserStatus.ACTIVE:
+        #     raise AppException(
+        #         status_code=403,
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         message="Account is not active",
+        #     )
 
         await self.userdevice_repo.create_update_device(user=user, request=request)
 

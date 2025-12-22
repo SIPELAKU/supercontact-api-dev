@@ -21,9 +21,7 @@ router = APIRouter(
 )
 
 
-# =========================
 # CREATE BRANCH
-# =========================
 @router.post(
     "/branches",
     response_model=BranchRead,
@@ -37,9 +35,7 @@ async def add_branch(
     return await service.add_branch(payload)
 
 
-# =========================
-# READ (ALL / FILTER / SEARCH)
-# =========================
+# READ
 @router.get(
     "/branches",
     response_model=List[BranchRead],
@@ -56,9 +52,7 @@ async def get_branches(
     )
 
 
-# =========================
 # READ BY ID
-# =========================
 @router.get(
     "/branches/{branch_id}",
     response_model=BranchRead,
@@ -71,9 +65,7 @@ async def get_branch_by_id(
     return await service.get_branch_by_id(branch_id)
 
 
-# =========================
 # UPDATE
-# =========================
 @router.put(
     "/branches/{branch_id}",
     response_model=BranchRead,
@@ -87,9 +79,7 @@ async def update_branch(
     return await service.update_branch(branch_id, payload)
 
 
-# =========================
 # DELETE
-# =========================
 @router.delete(
     "/branches/{branch_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -102,9 +92,7 @@ async def delete_branch(
     await service.delete_branch(branch_id)
 
 
-# =========================
-# DEPARTMENT DETAIL (🔥 BARU)
-# =========================
+# DEPARTMENT DETAIL
 @router.get(
     "/{department}/detail",
 )
