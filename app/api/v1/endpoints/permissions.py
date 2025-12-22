@@ -43,7 +43,7 @@ async def create_permission(
 @router.get(
     "",
     response_model=PaginatedPermission,
-    # dependencies=[Depends(require_permissions("permission:view"))],
+    dependencies=[Depends(require_permissions("permission:view"))],
 )
 async def list_permissions(
     search: Optional[str] = Query(None),

@@ -19,7 +19,7 @@ router = APIRouter(
     "",
     response_model=RoleRead,
     status_code=status.HTTP_201_CREATED,
-    # dependencies=[Depends(require_permissions("role:create"))],
+    dependencies=[Depends(require_permissions("role:create"))],
 )
 async def create_role(
     payload: RoleCreate,

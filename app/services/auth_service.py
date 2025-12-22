@@ -20,6 +20,7 @@ from app.schemas import (
     VerifyOtpResponse,
 )
 from app.utils import brevo_send_email
+from app.models.manage_user_model import UserStatus
 
 
 def generate_avatar_initial(fullname: str) -> str:
@@ -38,6 +39,7 @@ class AuthService:
         self.user_repo = UserRepository(db)
         self.userdevice_repo = UserDeviceRepository(db)
 
+    # TOKEN
     @staticmethod
     def create_access_token(user: User) -> str:
         data = {
@@ -46,10 +48,13 @@ class AuthService:
         }
         return create_token(data=data, token_type=TokenType.ACCESS_TOKEN)
 
+    # OTP
     async def create_and_send_user_otp(self, user: User, otp_type: UserOTPType):
         user_otp = await self.user_repo.create_user_otp(
             user_otp=UserOTP(
-                user_id=user.id, code=generate_6_digit_code(), otp_type=otp_type
+                user_id=user.id,
+                code=generate_6_digit_code(),
+                otp_type=otp_type,
             )
         )
 
@@ -71,6 +76,7 @@ class AuthService:
 
         await brevo_send_email(payload=payload)
 
+    # REGISTER
     async def register(self, payload: UserRegisterRequest):
         user = await self.user_repo.get_by_email(email=payload.email)
         if user:
@@ -87,11 +93,9 @@ class AuthService:
                 message="Passwords don't match",
             )
 
-        avatar_initial = generate_avatar_initial(payload.fullname)
-
         user = User(**payload.model_dump())
         user.password = hash_password(payload.password)
-        user.avatar_initial = avatar_initial
+        user.avatar_initial = generate_avatar_initial(payload.fullname)
 
         await self.user_repo.create(user)
 
@@ -104,6 +108,7 @@ class AuthService:
             "message": "Registration successful. Please check your email for OTP verification"
         }
 
+    # RESEND OTP
     async def resend_user_otp(self, payload: ResendOtpRequest):
         user = await self.user_repo.get_by_email(email=payload.email)
         if not user:
@@ -143,6 +148,7 @@ class AuthService:
 
         return {"message": "OTP has been sent successfully"}
 
+    # VERIFY OTP
     async def verify_user_otp(self, payload: VerifyOtpRequest):
         user = await self.user_repo.get_by_email(email=payload.email)
         if not user:
@@ -160,10 +166,10 @@ class AuthService:
             )
 
         user_otp = await self.user_repo.get_active_user_otp(
-            user_id=user.id, otp_type=payload.otp_type
+            user_id=user.id,
+            otp_type=payload.otp_type,
         )
 
-        # Invalidate OTP
         if not user_otp:
             raise AppException(
                 status_code=400,
@@ -186,7 +192,8 @@ class AuthService:
             )
 
         await self.user_repo.delete_all_user_otp(
-            user_id=user.id, otp_type=payload.otp_type
+            user_id=user.id,
+            otp_type=payload.otp_type,
         )
 
         if payload.otp_type == UserOTPType.VERIFICATION_EMAIL:
@@ -216,11 +223,8 @@ class AuthService:
 
         return None
 
-    async def login(
-        self,
-        request: Request,
-        payload: UserLoginRequest,
-    ):
+    # LOGIN
+    async def login(self, request: Request, payload: UserLoginRequest):
         user = await self.user_repo.get_by_email(email=payload.email)
 
         if not user or not verify_password(payload.password, user.password):
@@ -230,6 +234,7 @@ class AuthService:
                 message="Invalid email or password",
             )
 
+        # 🔥 FIX UTAMA DI SINI
         if not user.manage_user:
             raise AppException(
                 status_code=403,
@@ -237,12 +242,19 @@ class AuthService:
                 message="Account not activated yet",
             )
 
-        # ADD DEVICE
+        if user.manage_user.status != UserStatus.ACTIVE:
+            raise AppException(
+                status_code=403,
+                code=ErrorCode.AUTH_REQUIRED,
+                message="Account is not active",
+            )
+
         await self.userdevice_repo.create_update_device(user=user, request=request)
 
         access_token = self.create_access_token(user)
         return user, access_token
 
+    # RESET PASSWORD
     async def reset_password(self, user_id: UUID, payload: ResetPasswordRequest):
         user = await self.user_repo.get_by_id(user_id=user_id)
         if not user:
@@ -253,6 +265,6 @@ class AuthService:
             )
 
         user.password = hash_password(payload.password)
-
         await self.user_repo.update(user)
+
         return {"message": "Password reset successfully."}
