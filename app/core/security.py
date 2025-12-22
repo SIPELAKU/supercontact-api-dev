@@ -111,19 +111,19 @@ async def auth_require(
                 message="User not found",
             )
 
-        if not user.manage_user:
-            raise AppException(
-                status_code=403,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="Account not activated yet",
-            )
+        # if not user.manage_user:
+        #     raise AppException(
+        #         status_code=403,
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         message="Account not activated yet",
+        #     )
 
-        if user.manage_user.status != UserStatus.ACTIVE:
-            raise AppException(
-                status_code=403,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="User is inactive",
-            )
+        # if user.manage_user.status != UserStatus.ACTIVE:
+        #     raise AppException(
+        #         status_code=403,
+        #         code=ErrorCode.AUTH_REQUIRED,
+        #         message="User is inactive",
+        #     )
 
         return user
 
