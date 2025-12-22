@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core import TokenType, create_token, hash_password, verify_password
 from app.exceptions import AppException
 from app.models import User, UserOTP, UserOTPType
+from app.models.manage_user_model import UserStatus
 from app.repositories import UserRepository
 from app.repositories.userdevice_repository import UserDeviceRepository
 from app.schemas import (
@@ -20,7 +21,6 @@ from app.schemas import (
     VerifyOtpResponse,
 )
 from app.utils import brevo_send_email
-from app.models.manage_user_model import UserStatus
 
 
 def generate_avatar_initial(fullname: str) -> str:
@@ -232,14 +232,6 @@ class AuthService:
                 status_code=401,
                 code=ErrorCode.AUTH_REQUIRED,
                 message="Invalid email or password",
-            )
-
-        # 🔥 FIX UTAMA DI SINI
-        if not user.manage_user:
-            raise AppException(
-                status_code=403,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="Account not activated yet",
             )
 
         if user.manage_user.status != UserStatus.ACTIVE:
