@@ -23,6 +23,12 @@ class ManageUserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    _EAGER_LOAD = (
+        selectinload(ManageUser.user),
+        selectinload(ManageUser.role),
+        selectinload(ManageUser.branch),
+    )
+
     # CREATE
     async def create(self, mu: ManageUser) -> ManageUser:
         try:
@@ -37,13 +43,17 @@ class ManageUserRepository:
     # GET
     async def get_by_user_id(self, user_id: UUID) -> Optional[ManageUser]:
         result = await self.db.execute(
-            select(ManageUser).where(ManageUser.user_id == user_id)
+            select(ManageUser)
+            .options(*self._EAGER_LOAD)
+            .where(ManageUser.user_id == user_id)
         )
         return result.scalars().first()
 
     async def get_by_employee_id(self, employee_id: str) -> Optional[ManageUser]:
         result = await self.db.execute(
-            select(ManageUser).where(ManageUser.employee_id == employee_id)
+            select(ManageUser)
+            .options(*self._EAGER_LOAD)
+            .where(ManageUser.employee_id == employee_id)
         )
         return result.scalars().first()
 
@@ -72,9 +82,11 @@ class ManageUserRepository:
         status: Optional[UserStatus],
         role_id: Optional[UUID],
     ) -> Tuple[int, List[ManageUser]]:
+
         stmt = (
             select(ManageUser)
             .join(User)
+            .options(*self._EAGER_LOAD)  # 🔥 FIX UTAMA
             .where(ManageUser.status != UserStatus.INACTIVE)
         )
 
@@ -112,11 +124,7 @@ class ManageUserRepository:
             select(ManageUser)
             .join(Branch)
             .join(User)
-            .options(
-                selectinload(ManageUser.user),
-                selectinload(ManageUser.role),
-                selectinload(ManageUser.branch),
-            )
+            .options(*self._EAGER_LOAD)
             .where(
                 Branch.department == department,
                 ManageUser.status == UserStatus.ACTIVE,
