@@ -32,6 +32,9 @@ class ManageUserService:
         self.db = db
         self.repo = ManageUserRepository(db)
 
+    # =========================
+    # HELPERS
+    # =========================
     async def _get_or_404(self, model, condition, code):
         result = await self.db.execute(select(model).where(condition))
         obj = result.scalars().first()
@@ -46,6 +49,26 @@ class ManageUserService:
     ):
         if user_level in {UserLevel.MANAGER, UserLevel.SUPERVISOR} and not position:
             raise AppException(ErrorCode.INVALID_POSITION)
+
+    def _validate_status_transition(
+        self,
+        current: UserStatus,
+        new: UserStatus,
+    ):
+        """
+        Flow yang diizinkan:
+        - PENDING  -> ACTIVE
+        - ACTIVE   -> INACTIVE
+        - INACTIVE -> ACTIVE
+        """
+        allowed = {
+            UserStatus.PENDING: {UserStatus.ACTIVE},
+            UserStatus.ACTIVE: {UserStatus.INACTIVE},
+            UserStatus.INACTIVE: {UserStatus.ACTIVE},
+        }
+
+        if new not in allowed.get(current, set()):
+            raise AppException(ErrorCode.INVALID_STATUS_TRANSITION)
 
     async def _generate_employee_id(self, department: DepartmentEnum) -> str:
         while True:
@@ -71,7 +94,9 @@ class ManageUserService:
             updated_at=mu.updated_at,
         )
 
+    # =========================
     # CREATE
+    # =========================
     async def create(self, data: ManageUserCreateRequest) -> ManageUserResponse:
         # USER
         user = await self._get_or_404(
@@ -108,6 +133,7 @@ class ManageUserService:
         user_level = data.user_level or UserLevel.STAFF
         self._validate_position(user_level, data.position)
 
+        # 🔒 CREATE SELALU PENDING (ABAIkAN STATUS DARI FE)
         mu = ManageUser(
             user_id=user.id,
             role_id=role_id,
@@ -121,7 +147,9 @@ class ManageUserService:
         await self.repo.create(mu)
         return await self.get_by_id(mu.id)
 
+    # =========================
     # GET BY ID
+    # =========================
     async def get_by_id(self, id: UUID) -> ManageUserResponse:
         result = await self.db.execute(
             select(ManageUser)
@@ -138,7 +166,9 @@ class ManageUserService:
 
         return self._to_response(mu)
 
-    # UPDATE
+    # =========================
+    # UPDATE (APPROVAL / EDIT)
+    # =========================
     async def update(
         self,
         id: UUID,
@@ -148,9 +178,7 @@ class ManageUserService:
             ManageUser, ManageUser.id == id, ErrorCode.MANAGE_USER_NOT_FOUND
         )
 
-        branch: Optional[Branch] = None
-
-        # UPDATE DEPARTMENT
+        # UPDATE DEPARTMENT & BRANCH
         if data.department and data.branch:
             try:
                 department = DepartmentEnum(data.department)
@@ -168,6 +196,7 @@ class ManageUserService:
             if not mu.employee_id:
                 mu.employee_id = await self._generate_employee_id(branch.department)
 
+        # UPDATE ROLE
         if data.role is not None:
             if data.role == "":
                 mu.role_id = None
@@ -177,6 +206,7 @@ class ManageUserService:
                 )
                 mu.role_id = role.id
 
+        # UPDATE LEVEL & POSITION
         if data.user_level is not None:
             self._validate_position(data.user_level, data.position)
             mu.user_level = data.user_level
@@ -184,20 +214,26 @@ class ManageUserService:
         if data.position is not None:
             mu.position = data.position
 
+        # 🔐 UPDATE STATUS (HANYA JIKA DIKIRIM)
         if data.status is not None:
+            self._validate_status_transition(mu.status, data.status)
             mu.status = data.status
 
         await self.repo.update(mu)
         return await self.get_by_id(mu.id)
 
+    # =========================
     # SOFT DELETE
+    # =========================
     async def deactivate(self, id: UUID):
         mu = await self._get_or_404(
             ManageUser, ManageUser.id == id, ErrorCode.MANAGE_USER_NOT_FOUND
         )
         await self.repo.soft_delete(mu)
 
+    # =========================
     # LIST
+    # =========================
     async def list(
         self,
         *,
@@ -220,7 +256,9 @@ class ManageUserService:
             items=[self._to_response(mu) for mu in items],
         )
 
+    # =========================
     # HARD DELETE
+    # =========================
     async def hard_delete(self, id: UUID):
         mu = await self._get_or_404(
             ManageUser,
