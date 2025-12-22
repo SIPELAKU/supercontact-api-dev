@@ -17,11 +17,13 @@ class DepartmentRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    # =========================
     # CREATE
+    # =========================
     async def add_branch(self, data: BranchCreate) -> Branch:
         branch = Branch(
             department=data.department,
-            name=data.name.strip(),
+            name=data.branch.strip(),
         )
 
         try:
@@ -36,7 +38,7 @@ class DepartmentRepository:
                 status_code=status.HTTP_409_CONFLICT,
                 code=ErrorCode.ITEM_ALREADY_EXISTS,
                 message=(
-                    f"Branch '{data.name}' already exists "
+                    f"Branch '{data.branch}' already exists "
                     f"in department '{data.department.value}'"
                 ),
             )
@@ -49,14 +51,18 @@ class DepartmentRepository:
                 message=str(e),
             )
 
+    # =========================
     # GET ALL
+    # =========================
     async def get_all_branches(self) -> list[Branch]:
         result = await self.db.execute(
             select(Branch).order_by(Branch.department, Branch.name)
         )
         return result.scalars().all()
 
+    # =========================
     # GET BY ID
+    # =========================
     async def get_branch_by_id(self, branch_id: UUID) -> Branch:
         branch = await self.db.get(Branch, branch_id)
         if not branch:
@@ -67,12 +73,14 @@ class DepartmentRepository:
             )
         return branch
 
+    # =========================
     # UPDATE
+    # =========================
     async def update_branch(self, branch_id: UUID, data: BranchUpdate) -> Branch:
         branch = await self.get_branch_by_id(branch_id)
 
-        if data.name is not None:
-            branch.name = data.name.strip()
+        if data.branch is not None:
+            branch.name = data.branch.strip()
 
         if data.department is not None:
             branch.department = data.department
@@ -101,7 +109,9 @@ class DepartmentRepository:
                 message=str(e),
             )
 
+    # =========================
     # DELETE
+    # =========================
     async def delete_branch(self, branch_id: UUID):
         branch = await self.get_branch_by_id(branch_id)
 
@@ -116,6 +126,9 @@ class DepartmentRepository:
                 message=str(e),
             )
 
+    # =========================
+    # EXISTS
+    # =========================
     async def branch_exists(
         self,
         department: DepartmentEnum,
@@ -129,7 +142,9 @@ class DepartmentRepository:
         )
         return result.scalar_one() > 0
 
+    # =========================
     # FILTER BY DEPARTMENT
+    # =========================
     async def get_branches_by_department(
         self,
         department: DepartmentEnum,
@@ -139,7 +154,9 @@ class DepartmentRepository:
         )
         return result.scalars().all()
 
+    # =========================
     # FILTER BY NAME
+    # =========================
     async def filter_branch(self, keyword: str) -> list[Branch]:
         result = await self.db.execute(
             select(Branch)
@@ -148,6 +165,9 @@ class DepartmentRepository:
         )
         return result.scalars().all()
 
+    # =========================
+    # GET BY DEPARTMENT + ID
+    # =========================
     async def get_department_branch_by_id(
         self,
         department: DepartmentEnum,
@@ -168,6 +188,9 @@ class DepartmentRepository:
             )
         return branch
 
+    # =========================
+    # GET BY DEPARTMENT + NAME
+    # =========================
     async def get_department_branch_by_name(
         self,
         department: DepartmentEnum,
