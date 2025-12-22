@@ -3,13 +3,11 @@ from uuid import UUID
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from fastapi import status
 
 from app.models.branch_model import Branch
-from app.models.manage_user_model import ManageUser, UserLevel
-from app.schemas.branch_schema import BranchCreate, BranchUpdate
 from app.models.department_enum import DepartmentEnum
+from app.schemas.branch_schema import BranchCreate, BranchUpdate
 from app.exceptions import AppException
 from app.schemas.error_schema import ErrorCode
 
@@ -103,7 +101,26 @@ class DepartmentRepository:
                 message=str(e),
             )
 
-    async def branch_exists(self, department: DepartmentEnum, name: str) -> bool:
+    # DELETE
+    async def delete_branch(self, branch_id: UUID):
+        branch = await self.get_branch_by_id(branch_id)
+
+        try:
+            await self.db.delete(branch)
+            await self.db.commit()
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code=ErrorCode.DB_ERROR,
+                message=str(e),
+            )
+
+    async def branch_exists(
+        self,
+        department: DepartmentEnum,
+        name: str,
+    ) -> bool:
         result = await self.db.execute(
             select(func.count(Branch.id)).where(
                 Branch.department == department,
@@ -114,41 +131,59 @@ class DepartmentRepository:
 
     # FILTER BY DEPARTMENT
     async def get_branches_by_department(
-        self, department: DepartmentEnum
+        self,
+        department: DepartmentEnum,
     ) -> list[Branch]:
         result = await self.db.execute(
             select(Branch).where(Branch.department == department).order_by(Branch.name)
         )
         return result.scalars().all()
 
-    # FILTER BY BRANCH NAME
+    # FILTER BY NAME
     async def filter_branch(self, keyword: str) -> list[Branch]:
         result = await self.db.execute(
-            select(Branch).where(func.lower(Branch.name).ilike(f"%{keyword.lower()}%"))
+            select(Branch)
+            .where(func.lower(Branch.name).ilike(f"%{keyword.lower()}%"))
+            .order_by(Branch.department, Branch.name)
         )
         return result.scalars().all()
 
-    # DEPARTMENT DETAIL
-    async def get_department_detail(self, branch_id: UUID):
+    async def get_department_branch_by_id(
+        self,
+        department: DepartmentEnum,
+        branch_id: UUID,
+    ) -> Branch:
         result = await self.db.execute(
-            select(Branch)
-            .where(Branch.id == branch_id)
-            .options(selectinload(Branch.manage_users).selectinload(ManageUser.user))
+            select(Branch).where(
+                Branch.id == branch_id,
+                Branch.department == department,
+            )
         )
-
-        branch = result.scalar_one_or_none()
+        branch = result.scalars().first()
         if not branch:
             raise AppException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 code=ErrorCode.DATA_NOT_FOUND,
-                message="Branch not found",
+                message="Branch not found in this department",
             )
+        return branch
 
-        managers = [
-            mu for mu in branch.manage_users if mu.user_level == UserLevel.MANAGER
-        ]
-
-        return {
-            "branch": branch,
-            "managers": managers,
-        }
+    async def get_department_branch_by_name(
+        self,
+        department: DepartmentEnum,
+        branch_name: str,
+    ) -> Branch:
+        result = await self.db.execute(
+            select(Branch).where(
+                Branch.department == department,
+                func.lower(Branch.name) == branch_name.lower(),
+            )
+        )
+        branch = result.scalars().first()
+        if not branch:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code=ErrorCode.DATA_NOT_FOUND,
+                message="Branch not found in this department",
+            )
+        return branch

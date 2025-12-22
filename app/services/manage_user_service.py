@@ -80,9 +80,9 @@ class ManageUserService:
         if await self.repo.get_by_user_id(user.id):
             raise AppException(ErrorCode.USER_ALREADY_ASSIGNED)
 
-        branch = None
-        role_id = None
-        employee_id = None
+        branch: Optional[Branch] = None
+        role_id: Optional[UUID] = None
+        employee_id: Optional[str] = None
 
         if data.department and data.branch:
             try:
@@ -104,17 +104,17 @@ class ManageUserService:
             )
             role_id = role.id
 
-        if data.user_level:
-            self._validate_position(data.user_level, data.position)
+        user_level = data.user_level or UserLevel.STAFF
+        self._validate_position(user_level, data.position)
 
         mu = ManageUser(
             user_id=user.id,
             role_id=role_id,
             branch_id=branch.id if branch else None,
             employee_id=employee_id,
-            user_level=data.user_level or UserLevel.STAFF,
+            user_level=user_level,
             position=data.position,
-            status=data.status or UserStatus.PENDING,
+            status=UserStatus.PENDING,
         )
 
         await self.repo.create(mu)
@@ -147,34 +147,44 @@ class ManageUserService:
             ManageUser, ManageUser.id == id, ErrorCode.MANAGE_USER_NOT_FOUND
         )
 
-        try:
-            department = DepartmentEnum(data.department)
-        except ValueError:
-            raise AppException(ErrorCode.INVALID_DEPARTMENT)
+        branch: Optional[Branch] = None
 
-        branch = await self._get_or_404(
-            Branch,
-            (Branch.name == data.branch) & (Branch.department == department),
-            ErrorCode.BRANCH_NOT_FOUND,
-        )
+        # UPDATE DEPARTMENT
+        if data.department and data.branch:
+            try:
+                department = DepartmentEnum(data.department)
+            except ValueError:
+                raise AppException(ErrorCode.INVALID_DEPARTMENT)
 
-        role_id = None
-        if data.role:
-            role = await self._get_or_404(
-                Role, Role.role_name == data.role, ErrorCode.ROLE_NOT_FOUND
+            branch = await self._get_or_404(
+                Branch,
+                (Branch.name == data.branch) & (Branch.department == department),
+                ErrorCode.BRANCH_NOT_FOUND,
             )
-            role_id = role.id
 
-        self._validate_position(data.user_level, data.position)
+            mu.branch_id = branch.id
 
-        mu.branch_id = branch.id
-        mu.role_id = role_id
-        mu.user_level = data.user_level
-        mu.position = data.position
-        mu.status = data.status
+            if not mu.employee_id:
+                mu.employee_id = await self._generate_employee_id(branch.department)
 
-        if not mu.employee_id:
-            mu.employee_id = await self._generate_employee_id(branch.department)
+        if data.role is not None:
+            if data.role == "":
+                mu.role_id = None
+            else:
+                role = await self._get_or_404(
+                    Role, Role.role_name == data.role, ErrorCode.ROLE_NOT_FOUND
+                )
+                mu.role_id = role.id
+
+        if data.user_level is not None:
+            self._validate_position(data.user_level, data.position)
+            mu.user_level = data.user_level
+
+        if data.position is not None:
+            mu.position = data.position
+
+        if data.status is not None:
+            mu.status = data.status
 
         await self.repo.update(mu)
         return await self.get_by_id(mu.id)

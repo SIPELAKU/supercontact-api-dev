@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.session import get_async_session
 from app.services.department_service import DepartmentService
+from app.services.department_detail_service import DepartmentDetailService
 from app.schemas.branch_schema import (
     BranchCreate,
     BranchUpdate,
@@ -18,8 +19,11 @@ router = APIRouter(
     tags=["Departments"],
 )
 
+# =========================
+# BRANCH CRUD
+# =========================
 
-# CREATE
+
 @router.post(
     "/branches",
     response_model=BranchRead,
@@ -33,7 +37,6 @@ async def add_branch(
     return await service.add_branch(payload)
 
 
-# GET ALL
 @router.get(
     "/branches",
     response_model=List[BranchRead],
@@ -45,7 +48,6 @@ async def get_all_branches(
     return await service.get_all_branches()
 
 
-# GET BY ID
 @router.get(
     "/branches/{branch_id}",
     response_model=BranchRead,
@@ -58,7 +60,6 @@ async def get_branch_by_id(
     return await service.get_branch_by_id(branch_id)
 
 
-# UPDATE
 @router.put(
     "/branches/{branch_id}",
     response_model=BranchRead,
@@ -72,7 +73,6 @@ async def update_branch(
     return await service.update_branch(branch_id, payload)
 
 
-# DELETE BRANCH
 @router.delete(
     "/branches/{branch_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -85,7 +85,11 @@ async def delete_branch(
     await service.delete_branch(branch_id)
 
 
-# GET BRANCHES BY DEPARTMENT
+# =========================
+# FILTER & GROUPING
+# =========================
+
+
 @router.get(
     "/{department}/branches",
     response_model=List[BranchRead],
@@ -98,7 +102,6 @@ async def get_branches_by_department(
     return await service.get_branches_by_department(department)
 
 
-# FILTER BRANCH BY NAME
 @router.get(
     "/branches/search",
     response_model=List[BranchRead],
@@ -107,18 +110,35 @@ async def filter_branch(
     q: str = Query(..., min_length=2),
     db: AsyncSession = Depends(get_async_session),
 ):
-
     service = DepartmentService(db)
     return await service.filter_branch(q)
 
 
-# DEPARTMENT DETAIL
+# =========================
+# DEPARTMENT DETAIL (FIXED)
+# =========================
+
+
 @router.get(
-    "/branches/{branch_id}/detail",
+    "/{department}/detail",
 )
 async def get_department_detail(
-    branch_id: UUID,
+    department: DepartmentEnum,
+    branch_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ):
-    service = DepartmentService(db)
-    return await service.get_department_detail(branch_id)
+    """
+    Department Detail Page
+
+    - Filter by Department
+    - Optional filter by Branch
+    - ONLY ACTIVE STAFF
+    - Query langsung ke database (no in-memory filtering)
+    """
+
+    service = DepartmentDetailService(db)
+
+    return await service.get_detail(
+        department=department,
+        branch_id=branch_id,
+    )

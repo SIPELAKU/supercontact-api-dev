@@ -37,7 +37,7 @@ class ManageUserCreateRequest(BaseModel):
 
     user_level: Optional[UserLevel] = None
     position: Optional[Position] = None
-    status: Optional[UserStatus] = None
+    status: UserStatus
 
 
 # UPDATE
