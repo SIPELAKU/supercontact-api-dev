@@ -8,17 +8,17 @@ from app.models.department_enum import DepartmentEnum
 
 class BranchCreate(BaseModel):
     department: DepartmentEnum = Field(...)
-    branch: str = Field(..., min_length=2, max_length=100)
+    name: str = Field(..., min_length=2, max_length=100)
 
 
 class BranchUpdate(BaseModel):
     department: Optional[DepartmentEnum] = Field(None)
-    branch: Optional[str] = None
+    name: Optional[str] = None
 
 
 class BranchRead(BaseModel):
     id: UUID
     department: DepartmentEnum
-    branch: str
+    name: str
 
     model_config = ConfigDict(from_attributes=True)
