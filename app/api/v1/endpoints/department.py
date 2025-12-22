@@ -13,7 +13,7 @@ from app.schemas.branch_schema import (
     BranchRead,
 )
 from app.models.department_enum import DepartmentEnum
-from app.utils.permissions import require_permissions
+# from app.utils.permissions import require_permissions
 
 router = APIRouter(
     prefix="/departments",
