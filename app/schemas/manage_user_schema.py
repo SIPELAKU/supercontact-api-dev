@@ -58,6 +58,7 @@ class ManageUserResponse(BaseModel):
 
     fullname: str
     email: EmailStr
+    avatar_initial: str
 
     role: Optional[str]
     department: Optional[str]

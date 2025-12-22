@@ -59,6 +59,7 @@ class ManageUserService:
             user_id=mu.user.id,
             fullname=mu.user.fullname,
             email=mu.user.email,
+            avatar_initial=mu.user.avatar_initial,
             role=mu.role.role_name if mu.role else None,
             department=mu.branch.department.value if mu.branch else None,
             branch=mu.branch.name if mu.branch else None,
