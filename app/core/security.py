@@ -1,29 +1,22 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from uuid import UUID
 
 from fastapi import Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, ExpiredSignatureError, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.exceptions import AppException
-from app.models import UserStatus
 from app.models.user_model import User
 from app.schemas import ErrorCode
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-access_token_scheme = HTTPBearer(
-    scheme_name="AccessToken",
-    auto_error=False
-)
+access_token_scheme = HTTPBearer(scheme_name="AccessToken", auto_error=False)
 
-reset_token_scheme = HTTPBearer(
-    scheme_name="ResetPasswordToken",
-    auto_error=False
-)
+reset_token_scheme = HTTPBearer(scheme_name="ResetPasswordToken", auto_error=False)
 
 TOKEN_EXPIRE_MINUTES = 60
 
@@ -43,11 +36,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 async def get_db_session():
     from app.db import get_async_session
+
     async for session in get_async_session():
         yield session
 
 
-def create_token(data: dict, token_type: TokenType, expire_minutes: int = TOKEN_EXPIRE_MINUTES):
+def create_token(
+    data: dict, token_type: TokenType, expire_minutes: int = TOKEN_EXPIRE_MINUTES
+):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     to_encode.update({"exp": expire})
@@ -65,8 +61,8 @@ def create_token(data: dict, token_type: TokenType, expire_minutes: int = TOKEN_
 
 
 async def auth_require(
-        credentials: HTTPAuthorizationCredentials = Depends(access_token_scheme),
-        db: AsyncSession = Depends(get_db_session),
+    credentials: HTTPAuthorizationCredentials = Depends(access_token_scheme),
+    db: AsyncSession = Depends(get_db_session),
 ):
     if not credentials:
         raise AppException(
@@ -99,13 +95,6 @@ async def auth_require(
                 message="User not found",
             )
 
-        if user.status != UserStatus.ACTIVE:
-            raise AppException(
-                status_code=401,
-                code=ErrorCode.AUTH_REQUIRED,
-                message="User is inactive",
-            )
-
         return user
 
     except ExpiredSignatureError:
@@ -136,8 +125,8 @@ def check_roles(*allowed_roles: str):
 
 
 async def reset_token(
-        credentials: HTTPAuthorizationCredentials = Depends(reset_token_scheme),
-        db: AsyncSession = Depends(get_db_session),
+    credentials: HTTPAuthorizationCredentials = Depends(reset_token_scheme),
+    db: AsyncSession = Depends(get_db_session),
 ):
     if not credentials:
         raise AppException(

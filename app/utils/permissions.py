@@ -14,12 +14,12 @@ async def get_current_role(
         user: User = Depends(auth_require),
         db: AsyncSession = Depends(get_async_session),
 ) -> Role:
-    if not user.role_id:
-        raise AppException(
-            status_code=403,
-            code=ErrorCode.FORBIDDEN,
-            message="User has no role assigned",
-        )
+    # if not user.role_id:
+    #     raise AppException(
+    #         status_code=403,
+    #         code=ErrorCode.FORBIDDEN,
+    #         message="User has no role assigned",
+    #     )
 
     stmt = (
         select(Role)

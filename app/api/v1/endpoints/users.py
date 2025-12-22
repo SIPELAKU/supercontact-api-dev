@@ -12,8 +12,6 @@ from app.schemas import (
     UserGetQuery,
 )
 from app.services import UserService
-from app.utils.permissions import require_permissions
-
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
@@ -24,7 +22,7 @@ def get_user_service(db: AsyncSession = Depends(get_async_session)):
 @router.post(
     "",
     response_model=UserResponse,
-    dependencies=[Depends(require_permissions("user:create"))],
+    # dependencies=[Depends(require_permissions("user:create"))],
 )
 async def create_user(
         data: UserCreateRequest,
@@ -36,7 +34,7 @@ async def create_user(
 @router.get(
     "",
     response_model=PaginatedUserResponse,
-    dependencies=[Depends(require_permissions("user:read"))],
+    # dependencies=[Depends(require_permissions("user:read"))],
 )
 async def list_users(
         query: UserGetQuery = Depends(),
@@ -48,7 +46,7 @@ async def list_users(
 @router.get(
     "/{user_id}",
     response_model=UserResponse,
-    dependencies=[Depends(require_permissions("user:read"))],
+    # dependencies=[Depends(require_permissions("user:read"))],
 )
 async def get_user(
         user_id: UUID,
@@ -60,7 +58,7 @@ async def get_user(
 @router.put(
     "/{user_id}",
     response_model=UserResponse,
-    dependencies=[Depends(require_permissions("user:update"))],
+    # dependencies=[Depends(require_permissions("user:update"))],
 )
 async def update_user(
         user_id: UUID,
@@ -72,7 +70,7 @@ async def update_user(
 
 @router.delete(
     "/{user_id}",
-    dependencies=[Depends(require_permissions("user:delete"))],
+    # dependencies=[Depends(require_permissions("user:delete"))],
 )
 async def delete_user(
         user_id: UUID,

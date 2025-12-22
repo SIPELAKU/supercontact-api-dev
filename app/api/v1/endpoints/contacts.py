@@ -8,21 +8,20 @@ from app.db.session import get_async_session
 from app.models import User
 from app.schemas import (
     ContactCreate,
-    ContactUpdate,
-    PaginatedContacts,
+    ContactDeleteResponse,
+    ContactGetQuery,
     ContactNoteCreate,
     ContactNoteResponse,
-    ContactTaskCreate,
-    ContactTaskResponse,
-    ResponseModel,
     ContactResponse,
-    ContactDeleteResponse,
     ContactSortBy,
     ContactSortOrder,
-    ContactGetQuery,
+    ContactTaskCreate,
+    ContactTaskResponse,
+    ContactUpdate,
+    PaginatedContacts,
+    ResponseModel,
 )
 from app.services.contact_service import ContactService
-from app.utils.permissions import require_permissions
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
 
@@ -177,7 +176,7 @@ async def create_task(
 @router.get(
     "/{contact_id}/tasks",
     response_model=ResponseModel[list[ContactTaskResponse]],
-    dependencies=[Depends(require_permissions("contact:task:view"))],
+    # dependencies=[Depends(require_permissions("contact:task:view"))],
 )
 async def get_all_tasks(
     contact_id: UUID,
