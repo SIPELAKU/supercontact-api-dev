@@ -1,5 +1,4 @@
 from typing import Optional
-
 from fastapi import Request
 from starlette.responses import JSONResponse
 
@@ -7,7 +6,6 @@ from app.schemas import ErrorResponse, ErrorCode, ResponseModel
 
 
 class AppException(Exception):
-
     def __init__(
         self,
         *,

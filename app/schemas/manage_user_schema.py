@@ -28,7 +28,6 @@ class Position(StrEnum):
 
 # CREATE
 class ManageUserCreateRequest(BaseModel):
-
     email: EmailStr
 
     department: Optional[str] = None
@@ -37,19 +36,18 @@ class ManageUserCreateRequest(BaseModel):
 
     user_level: Optional[UserLevel] = None
     position: Optional[Position] = None
-    status: UserStatus
+    status: UserStatus = UserStatus.PENDING
 
 
 # UPDATE
 class ManageUserUpdateRequest(BaseModel):
+    department: Optional[str] = None
+    branch: Optional[str] = None
+    role: Optional[str] = None
 
-    department: str
-    branch: str
-    role: Optional[str]
-
-    user_level: UserLevel
-    position: Optional[Position]
-    status: UserStatus
+    user_level: Optional[UserLevel] = None
+    position: Optional[Position] = None
+    status: Optional[UserStatus] = None
 
 
 class ManageUserResponse(BaseModel):

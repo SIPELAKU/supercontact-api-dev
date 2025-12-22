@@ -32,14 +32,15 @@ class ManageUserService:
         self.db = db
         self.repo = ManageUserRepository(db)
 
-    # =========================
-    # HELPERS
-    # =========================
-    async def _get_or_404(self, model, condition, code):
+    async def _get_or_404(self, model, condition, code: ErrorCode):
         result = await self.db.execute(select(model).where(condition))
         obj = result.scalars().first()
         if not obj:
-            raise AppException(code)
+            raise AppException(
+                status_code=404,
+                code=code,
+                message="Data not found",
+            )
         return obj
 
     def _validate_position(
@@ -48,19 +49,20 @@ class ManageUserService:
         position: Optional[Position],
     ):
         if user_level in {UserLevel.MANAGER, UserLevel.SUPERVISOR} and not position:
-            raise AppException(ErrorCode.INVALID_POSITION)
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.BAD_REQUEST,
+                message="Position is required for manager or supervisor",
+            )
 
     def _validate_status_transition(
         self,
         current: UserStatus,
         new: UserStatus,
     ):
-        """
-        Flow yang diizinkan:
-        - PENDING  -> ACTIVE
-        - ACTIVE   -> INACTIVE
-        - INACTIVE -> ACTIVE
-        """
+        if current == new:
+            return
+
         allowed = {
             UserStatus.PENDING: {UserStatus.ACTIVE},
             UserStatus.ACTIVE: {UserStatus.INACTIVE},
@@ -68,13 +70,34 @@ class ManageUserService:
         }
 
         if new not in allowed.get(current, set()):
-            raise AppException(ErrorCode.INVALID_STATUS_TRANSITION)
+            raise AppException(
+                status_code=400,
+                code=ErrorCode.INVALID_STATUS_TRANSITION,
+                message=f"Cannot change status from {current} to {new}",
+            )
 
     async def _generate_employee_id(self, department: DepartmentEnum) -> str:
         while True:
             emp_id = f"{department.code}-{random.randint(100, 999)}"
             if not await self.repo.get_by_employee_id(emp_id):
                 return emp_id
+
+    async def _validate_single_manager_per_branch(
+        self,
+        *,
+        branch_id: UUID,
+        current_manage_user_id: Optional[UUID] = None,
+    ):
+        exists = await self.repo.manager_exists_in_branch(
+            branch_id=branch_id,
+            exclude_user_id=current_manage_user_id,
+        )
+        if exists:
+            raise AppException(
+                status_code=409,
+                code=ErrorCode.MANAGER_ALREADY_EXISTS,
+                message="Manager already exists in this branch",
+            )
 
     def _to_response(self, mu: ManageUser) -> ManageUserResponse:
         return ManageUserResponse(
@@ -94,46 +117,54 @@ class ManageUserService:
             updated_at=mu.updated_at,
         )
 
-    # =========================
     # CREATE
-    # =========================
     async def create(self, data: ManageUserCreateRequest) -> ManageUserResponse:
-        # USER
         user = await self._get_or_404(
-            User, User.email == data.email, ErrorCode.USER_NOT_FOUND
+            User,
+            User.email == data.email,
+            ErrorCode.USER_NOT_FOUND,
         )
 
         if await self.repo.get_by_user_id(user.id):
-            raise AppException(ErrorCode.USER_ALREADY_ASSIGNED)
+            raise AppException(
+                status_code=409,
+                code=ErrorCode.USER_ALREADY_ASSIGNED,
+                message="User already assigned",
+            )
 
         branch: Optional[Branch] = None
         role_id: Optional[UUID] = None
         employee_id: Optional[str] = None
 
         if data.department and data.branch:
-            try:
-                department = DepartmentEnum(data.department)
-            except ValueError:
-                raise AppException(ErrorCode.INVALID_DEPARTMENT)
-
+            department = DepartmentEnum(data.department)
             branch = await self._get_or_404(
                 Branch,
                 (Branch.name == data.branch) & (Branch.department == department),
                 ErrorCode.BRANCH_NOT_FOUND,
             )
-
             employee_id = await self._generate_employee_id(branch.department)
 
         if data.role:
             role = await self._get_or_404(
-                Role, Role.role_name == data.role, ErrorCode.ROLE_NOT_FOUND
+                Role,
+                Role.role_name == data.role,
+                ErrorCode.ROLE_NOT_FOUND,
             )
             role_id = role.id
 
         user_level = data.user_level or UserLevel.STAFF
         self._validate_position(user_level, data.position)
 
-        # 🔒 CREATE SELALU PENDING (ABAIkAN STATUS DARI FE)
+        if user_level == UserLevel.MANAGER:
+            if not branch:
+                raise AppException(
+                    status_code=400,
+                    code=ErrorCode.BRANCH_REQUIRED_FOR_MANAGER,
+                    message="Branch is required for manager",
+                )
+            await self._validate_single_manager_per_branch(branch_id=branch.id)
+
         mu = ManageUser(
             user_id=user.id,
             role_id=role_id,
@@ -147,9 +178,7 @@ class ManageUserService:
         await self.repo.create(mu)
         return await self.get_by_id(mu.id)
 
-    # =========================
     # GET BY ID
-    # =========================
     async def get_by_id(self, id: UUID) -> ManageUserResponse:
         result = await self.db.execute(
             select(ManageUser)
@@ -162,29 +191,28 @@ class ManageUserService:
         )
         mu = result.scalars().first()
         if not mu:
-            raise AppException(ErrorCode.MANAGE_USER_NOT_FOUND)
-
+            raise AppException(
+                status_code=404,
+                code=ErrorCode.MANAGE_USER_NOT_FOUND,
+                message="Manage user not found",
+            )
         return self._to_response(mu)
 
-    # =========================
-    # UPDATE (APPROVAL / EDIT)
-    # =========================
+    # UPDATE
     async def update(
         self,
         id: UUID,
         data: ManageUserUpdateRequest,
     ) -> ManageUserResponse:
+
         mu = await self._get_or_404(
-            ManageUser, ManageUser.id == id, ErrorCode.MANAGE_USER_NOT_FOUND
+            ManageUser,
+            ManageUser.id == id,
+            ErrorCode.MANAGE_USER_NOT_FOUND,
         )
 
-        # UPDATE DEPARTMENT & BRANCH
-        if data.department and data.branch:
-            try:
-                department = DepartmentEnum(data.department)
-            except ValueError:
-                raise AppException(ErrorCode.INVALID_DEPARTMENT)
-
+        if data.department is not None and data.branch is not None:
+            department = DepartmentEnum(data.department)
             branch = await self._get_or_404(
                 Branch,
                 (Branch.name == data.branch) & (Branch.department == department),
@@ -193,28 +221,44 @@ class ManageUserService:
 
             mu.branch_id = branch.id
 
+            if mu.user_level == UserLevel.MANAGER:
+                await self._validate_single_manager_per_branch(
+                    branch_id=branch.id,
+                    current_manage_user_id=mu.id,
+                )
+
             if not mu.employee_id:
                 mu.employee_id = await self._generate_employee_id(branch.department)
 
-        # UPDATE ROLE
         if data.role is not None:
-            if data.role == "":
-                mu.role_id = None
-            else:
-                role = await self._get_or_404(
-                    Role, Role.role_name == data.role, ErrorCode.ROLE_NOT_FOUND
-                )
-                mu.role_id = role.id
+            role = await self._get_or_404(
+                Role,
+                Role.role_name == data.role,
+                ErrorCode.ROLE_NOT_FOUND,
+            )
+            mu.role_id = role.id
 
-        # UPDATE LEVEL & POSITION
         if data.user_level is not None:
             self._validate_position(data.user_level, data.position)
+
+            if data.user_level == UserLevel.MANAGER:
+                if not mu.branch_id:
+                    raise AppException(
+                        status_code=400,
+                        code=ErrorCode.BRANCH_REQUIRED_FOR_MANAGER,
+                        message="Branch is required for manager",
+                    )
+
+                await self._validate_single_manager_per_branch(
+                    branch_id=mu.branch_id,
+                    current_manage_user_id=mu.id,
+                )
+
             mu.user_level = data.user_level
 
         if data.position is not None:
             mu.position = data.position
 
-        # 🔐 UPDATE STATUS (HANYA JIKA DIKIRIM)
         if data.status is not None:
             self._validate_status_transition(mu.status, data.status)
             mu.status = data.status
@@ -222,18 +266,19 @@ class ManageUserService:
         await self.repo.update(mu)
         return await self.get_by_id(mu.id)
 
-    # =========================
-    # SOFT DELETE
-    # =========================
+    # DEACTIVATE
     async def deactivate(self, id: UUID):
         mu = await self._get_or_404(
-            ManageUser, ManageUser.id == id, ErrorCode.MANAGE_USER_NOT_FOUND
+            ManageUser,
+            ManageUser.id == id,
+            ErrorCode.MANAGE_USER_NOT_FOUND,
         )
-        await self.repo.soft_delete(mu)
 
-    # =========================
+        self._validate_status_transition(mu.status, UserStatus.INACTIVE)
+        mu.status = UserStatus.INACTIVE
+        await self.repo.update(mu)
+
     # LIST
-    # =========================
     async def list(
         self,
         *,
@@ -243,6 +288,7 @@ class ManageUserService:
         status: Optional[UserStatus] = None,
         role_id: Optional[UUID] = None,
     ) -> ManageUserListResponse:
+
         total, items = await self.repo.list(
             page=page,
             limit=limit,
@@ -256,9 +302,7 @@ class ManageUserService:
             items=[self._to_response(mu) for mu in items],
         )
 
-    # =========================
     # HARD DELETE
-    # =========================
     async def hard_delete(self, id: UUID):
         mu = await self._get_or_404(
             ManageUser,

@@ -67,10 +67,24 @@ class ManageUserRepository:
             await self.db.rollback()
             raise AppException(ErrorCode.DATABASE_ERROR)
 
-    # SOFT DELETE
-    async def soft_delete(self, mu: ManageUser):
-        mu.status = UserStatus.INACTIVE
-        await self.update(mu)
+    # MANAGER VALIDATION
+    async def manager_exists_in_branch(
+        self,
+        *,
+        branch_id: UUID,
+        exclude_user_id: Optional[UUID] = None,
+    ) -> bool:
+        stmt = select(func.count(ManageUser.id)).where(
+            ManageUser.branch_id == branch_id,
+            ManageUser.user_level == UserLevel.MANAGER,
+            ManageUser.status == UserStatus.ACTIVE,
+        )
+
+        if exclude_user_id:
+            stmt = stmt.where(ManageUser.id != exclude_user_id)
+
+        result = await self.db.execute(stmt)
+        return result.scalar_one() > 0
 
     # LIST
     async def list(
@@ -86,7 +100,7 @@ class ManageUserRepository:
         stmt = (
             select(ManageUser)
             .join(User)
-            .options(*self._EAGER_LOAD)  # 🔥 FIX UTAMA
+            .options(*self._EAGER_LOAD)
             .where(ManageUser.status != UserStatus.INACTIVE)
         )
 
