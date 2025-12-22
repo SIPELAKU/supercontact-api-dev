@@ -1,10 +1,10 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from uuid import UUID
 
 from fastapi import Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, ExpiredSignatureError, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -51,25 +51,21 @@ async def get_db_session():
         yield session
 
 
-# TOKEN CREATOR
 def create_token(
     data: dict,
     token_type: TokenType,
     expire_minutes: int = TOKEN_EXPIRE_MINUTES,
 ):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
-    to_encode.update({"exp": expire})
+    payload = data.copy()
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
 
-    secret_key = settings.SECRET_KEY
-    if token_type == TokenType.RESET_PASSWORD:
-        secret_key = settings.RESET_PASSWORD_KEY
-
-    return jwt.encode(
-        to_encode,
-        secret_key,
-        algorithm=settings.ALGORITHM,
+    secret_key = (
+        settings.RESET_PASSWORD_KEY
+        if token_type == TokenType.RESET_PASSWORD
+        else settings.SECRET_KEY
     )
+
+    return jwt.encode(payload, secret_key, algorithm=settings.ALGORITHM)
 
 
 # AUTH REQUIRE
@@ -85,9 +81,8 @@ async def auth_require(
         )
 
     try:
-        token = credentials.credentials
         payload = jwt.decode(
-            token,
+            credentials.credentials,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
@@ -105,6 +100,7 @@ async def auth_require(
             .options(selectinload(User.manage_user))
             .where(User.id == UUID(user_id))
         )
+
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
 
@@ -172,9 +168,8 @@ async def reset_token(
         )
 
     try:
-        token = credentials.credentials
         payload = jwt.decode(
-            token,
+            credentials.credentials,
             settings.RESET_PASSWORD_KEY,
             algorithms=[settings.ALGORITHM],
         )

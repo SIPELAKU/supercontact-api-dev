@@ -1,20 +1,19 @@
 import asyncio
 from uuid import uuid4
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 from sqlmodel import select
 
-from app.models.user_model import User
-from app.models.manage_user_model import ManageUser, UserLevel, UserStatus, Position
-from app.models.role_model import Role
-from app.models.branch_model import Branch
+from app.db import get_async_session
+from app.models import (
+    Branch,
+    ManageUser,
+    Position,
+    Role,
+    User,
+    UserLevel,
+    UserStatus,
+)
 from app.models.department_enum import DepartmentEnum
-
-DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
-
-engine = create_async_engine(DATABASE_URL, echo=True)
-AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 MANAGE_USER_MAP = {
     "superadmin@company.com": {
@@ -35,56 +34,56 @@ MANAGE_USER_MAP = {
 
 
 async def seed_manage_users():
-    async with AsyncSessionLocal() as session:
-        for email, cfg in MANAGE_USER_MAP.items():
+    db_gen = get_async_session()
+    db = await anext(db_gen)
+    for email, cfg in MANAGE_USER_MAP.items():
+        user = (
+            await db.execute(select(User).where(User.email == email))
+        ).scalar_one_or_none()
 
-            user = (
-                await session.execute(select(User).where(User.email == email))
-            ).scalar_one_or_none()
+        if not user:
+            print(f"⚠️ User not found: {email}")
+            continue
 
-            if not user:
-                print(f"⚠️ User not found: {email}")
-                continue
+        exists = (
+            await db.execute(select(ManageUser).where(ManageUser.user_id == user.id))
+        ).scalar_one_or_none()
 
-            exists = (
-                await session.execute(
-                    select(ManageUser).where(ManageUser.user_id == user.id)
-                )
-            ).scalar_one_or_none()
+        if exists:
+            print(f"⚠️ ManageUser exists: {email}")
+            continue
 
-            if exists:
-                print(f"⚠️ ManageUser exists: {email}")
-                continue
+        role = (
+            await db.execute(select(Role).where(Role.role_name == cfg["role"]))
+        ).scalar_one()
 
-            role = (
-                await session.execute(select(Role).where(Role.role_name == cfg["role"]))
-            ).scalar_one()
-
-            branch = (
-                await session.execute(
-                    select(Branch).where(
-                        Branch.name == cfg["branch"],
-                        Branch.department == cfg["department"],
-                    )
-                )
-            ).scalar_one()
-
-            session.add(
-                ManageUser(
-                    id=uuid4(),
-                    user_id=user.id,
-                    role_id=role.id,
-                    branch_id=branch.id,
-                    user_level=cfg["user_level"],
-                    status=UserStatus.ACTIVE,
-                    position=cfg["position"],
+        branch = (
+            await db.execute(
+                select(Branch).where(
+                    Branch.name == cfg["branch"],
+                    Branch.department == cfg["department"],
                 )
             )
+        ).scalar_one()
 
-            print(f"✅ ManageUser created: {email}")
+        db.add(
+            ManageUser(
+                id=uuid4(),
+                user_id=user.id,
+                role_id=role.id,
+                branch_id=branch.id,
+                user_level=cfg["user_level"],
+                status=UserStatus.ACTIVE,
+                position=cfg["position"],
+            )
+        )
 
-        await session.commit()
+        print(f"✅ ManageUser created: {email}")
+
+    await db.commit()
 
 
 if __name__ == "__main__":
+    print("Running database seed...")
     asyncio.run(seed_manage_users())
+    print("Seed completed!")

@@ -14,11 +14,6 @@ async def get_current_role(
     user: User = Depends(auth_require),
     db: AsyncSession = Depends(get_async_session),
 ) -> Role:
-    """
-    Ambil role user melalui tabel manage_users
-    Alur:
-    User -> ManageUser -> Role -> Permissions
-    """
 
     stmt = (
         select(ManageUser)
@@ -47,11 +42,6 @@ async def get_current_role(
 
 
 def require_roles(*allowed_roles: str):
-    """
-    Batasi akses berdasarkan role name
-    Contoh:
-    Depends(require_roles("Super Admin", "Admin"))
-    """
 
     async def wrapper(role: Role = Depends(get_current_role)) -> Role:
         if role.role_name not in allowed_roles:
@@ -66,20 +56,16 @@ def require_roles(*allowed_roles: str):
 
 
 def require_permissions(*required_permissions: str):
-    """
-    Batasi akses berdasarkan permission
-    Support wildcard per module (contoh: user:*)
-    """
 
     async def wrapper(role: Role = Depends(get_current_role)) -> Role:
         user_permissions = {p.permission_name for p in role.permissions}
 
         for required in required_permissions:
-            # permission exact
+            # exact permission
             if required in user_permissions:
                 continue
 
-            # permission wildcard module
+            # wildcard module
             module = required.split(":")[0]
             if f"{module}:*" in user_permissions:
                 continue

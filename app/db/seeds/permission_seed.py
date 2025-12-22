@@ -1,16 +1,10 @@
 import asyncio
 from uuid import uuid4
 
-from sqlmodel import SQLModel, select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import select
 
+from app.db import get_async_session
 from app.models.role_model import Permission
-
-DATABASE_URL = "postgresql+asyncpg://postgres:codedavid18@localhost:5433/supercontact"
-
-engine = create_async_engine(DATABASE_URL, echo=True)
-async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 PERMISSIONS = [
     # USER
@@ -49,9 +43,11 @@ OLD_TO_NEW = {
 }
 
 
-async def seed_permissions(session: AsyncSession):
+async def seed_permissions():
+    db_gen = get_async_session()
+    db = await anext(db_gen)
     for old, new in OLD_TO_NEW.items():
-        result = await session.execute(
+        result = await db.execute(
             select(Permission).where(Permission.permission_name == old)
         )
         perm = result.scalar_one_or_none()
@@ -60,7 +56,7 @@ async def seed_permissions(session: AsyncSession):
             perm.permission_name = new
 
     for perm_name in PERMISSIONS:
-        result = await session.execute(
+        result = await db.execute(
             select(Permission).where(Permission.permission_name == perm_name)
         )
         exists = result.scalar_one_or_none()
@@ -68,25 +64,17 @@ async def seed_permissions(session: AsyncSession):
         if exists:
             continue
 
-        session.add(
+        db.add(
             Permission(
                 id=uuid4(),
                 permission_name=perm_name,
             )
         )
 
-    await session.commit()
-
-
-async def main():
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-
-    async with async_session() as session:
-        await seed_permissions(session)
-
-    print("Permissions seeded (branch removed)")
+    await db.commit()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("Running database seed...")
+    asyncio.run(seed_permissions())
+    print("Seed completed!")
