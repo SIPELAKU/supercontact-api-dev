@@ -92,6 +92,18 @@ class User(SQLModel, table=True):
     otps: List["UserOTP"] = Relationship(back_populates="user")
     notes: List["Note"] = Relationship(back_populates="user")
     device: List["UserDevice"] = Relationship(back_populates="user")
+    sent_messages: list["ChatMessage"] = Relationship(
+        back_populates="sender",
+        sa_relationship_kwargs={
+            "foreign_keys": "ChatMessage.sender_id"
+        }
+    )
+    received_messages: list["ChatMessage"] = Relationship(
+        back_populates="receiver",
+        sa_relationship_kwargs={
+            "foreign_keys": "ChatMessage.receiver_id"
+        }
+    )
 
     manage_user: Optional["ManageUser"] = Relationship(
         back_populates="user",

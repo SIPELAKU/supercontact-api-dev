@@ -14,6 +14,7 @@ from .endpoints import (
     mailings_router,
     userdevice_router,
     notes_router,
+    chat_router,
 )
 
 from .router import api_router

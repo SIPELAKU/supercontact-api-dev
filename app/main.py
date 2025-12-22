@@ -1,18 +1,14 @@
-from fastapi import FastAPI, Request, Depends
-from fastapi.exceptions import (
-    RequestValidationError,
-    HTTPException as FastAPIHTTPException,
-)
+from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_v1_router
 from app.core import settings
 from app.db import get_async_session
 from app.exceptions import AppException, app_exception_handler
-from app.schemas import ErrorCode, ResponseModel, ErrorResponse
+from app.schemas import ErrorCode, ErrorResponse, ResponseModel
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -63,11 +59,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+# ERROR HANDLER FOR SERVER ERROR
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    if isinstance(exc, (FastAPIHTTPException, StarletteHTTPException)):
-        raise exc
-
+    print(exc)
     return JSONResponse(
         status_code=500,
         content=ResponseModel(

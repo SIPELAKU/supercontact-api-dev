@@ -1,42 +1,35 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_db_session
 from app.exceptions import AppException
 from app.models import QuotationStatus
 from app.schemas import (
-    ResponseModel,
-    QuotationResponse,
+    ErrorCode,
     QuotationListResponse,
     QuotationRequest,
-    ErrorCode,
+    QuotationResponse,
     QuotationSendEmailResponse,
+    ResponseModel,
 )
 from app.schemas.quotation_schema import QuotationGetQuery
 from app.services import QuotationService
-from app.utils.permissions import require_permissions
 
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
 
 
-# =========================
-# Dependency
-# =========================
 async def get_quotation_service(
     db: AsyncSession = Depends(get_db_session),
 ):
     return QuotationService(db=db)
 
 
-# =========================
-# GET ALL QUOTATIONS
-# =========================
 @router.get(
     "",
     response_model=ResponseModel[QuotationListResponse],
-    dependencies=[Depends(require_permissions("quotation:view"))],
+    # dependencies=[Depends(require_permissions("quotation:view"))],
 )
 async def get_all_quotations(
     query_params: QuotationGetQuery = Depends(),
@@ -46,13 +39,10 @@ async def get_all_quotations(
     return ResponseModel(data=data)
 
 
-# =========================
-# CREATE NEW QUOTATION (DRAFT)
-# =========================
 @router.post(
     "/draft",
     response_model=ResponseModel[QuotationResponse],
-    dependencies=[Depends(require_permissions("quotation:create"))],
+    # dependencies=[Depends(require_permissions("quotation:create"))],
 )
 async def create_new_quotation_as_draft(
     payload: QuotationRequest,
@@ -65,13 +55,10 @@ async def create_new_quotation_as_draft(
     return ResponseModel(data=data)
 
 
-# =========================
-# CREATE NEW QUOTATION (PUBLISH)
-# =========================
 @router.post(
     "/publish",
     response_model=ResponseModel[QuotationResponse],
-    dependencies=[Depends(require_permissions("quotation:publish"))],
+    # dependencies=[Depends(require_permissions("quotation:publish"))],
 )
 async def create_new_quotation_as_publish(
     payload: QuotationRequest,
@@ -84,13 +71,10 @@ async def create_new_quotation_as_publish(
     return ResponseModel(data=data)
 
 
-# =========================
-# GET QUOTATION BY ID
-# =========================
 @router.get(
     "/{quotation_id}",
     response_model=ResponseModel[QuotationResponse],
-    dependencies=[Depends(require_permissions("quotation:view"))],
+    # dependencies=[Depends(require_permissions("quotation:view"))],
 )
 async def get_quotation_by_id(
     quotation_id: UUID,
@@ -100,13 +84,10 @@ async def get_quotation_by_id(
     return ResponseModel(data=data)
 
 
-# =========================
-# UPDATE QUOTATION (DRAFT)
-# =========================
 @router.put(
     "/{quotation_id}/draft",
     response_model=ResponseModel[QuotationResponse],
-    dependencies=[Depends(require_permissions("quotation:update"))],
+    # dependencies=[Depends(require_permissions("quotation:update"))],
 )
 async def update_quotation_by_id_as_draft(
     quotation_id: UUID,
@@ -121,13 +102,10 @@ async def update_quotation_by_id_as_draft(
     return ResponseModel(data=data)
 
 
-# =========================
-# UPDATE QUOTATION (PUBLISH)
-# =========================
 @router.put(
     "/{quotation_id}/publish",
     response_model=ResponseModel[QuotationResponse],
-    dependencies=[Depends(require_permissions("quotation:publish"))],
+    # dependencies=[Depends(require_permissions("quotation:publish"))],
 )
 async def update_quotation_by_id_as_publish(
     quotation_id: UUID,
@@ -142,13 +120,10 @@ async def update_quotation_by_id_as_publish(
     return ResponseModel(data=data)
 
 
-# =========================
-# SEND QUOTATION VIA EMAIL
-# =========================
 @router.post(
     "/send-email",
     response_model=ResponseModel[QuotationSendEmailResponse],
-    dependencies=[Depends(require_permissions("quotation:send_email"))],
+    # dependencies=[Depends(require_permissions("quotation:send_email"))],
 )
 async def send_to_quotation_by_email(
     to_email: str = Form(...),
