@@ -25,7 +25,11 @@ app.add_middleware(
 
 @app.get("/", tags=["Root"])
 def root():
-    return {"success": True, "data": {"message": "Server is running!"}, "errors": None}
+    return {
+        "success": True,
+        "data": {"message": "Server is running!"},
+        "errors": None,
+    }
 
 
 @app.get("/health", tags=["Health"])
@@ -37,11 +41,9 @@ async def health(db=Depends(get_async_session)):
         return {"status": "error", "database": "disconnected"}
 
 
-# ERROR HANDLER FOR AppException (404, 403, dll)
 app.add_exception_handler(AppException, app_exception_handler)
 
 
-# ERROR HANDLER FOR VALIDATION ERROR
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
@@ -66,7 +68,9 @@ async def generic_exception_handler(request: Request, exc: Exception):
         content=ResponseModel(
             success=False,
             error=ErrorResponse(
-                code=ErrorCode.SERVER_ERROR, message="Internal server error", details={}
+                code=ErrorCode.SERVER_ERROR,
+                message="Internal Server Error",
+                details={},
             ),
         ).model_dump(),
     )

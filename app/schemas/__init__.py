@@ -1,3 +1,4 @@
+# AUTH
 from .auth_schema import (
     UserLoginRequest,
     UserLoginResponse,
@@ -10,6 +11,8 @@ from .auth_schema import (
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
+
+# CONTACT
 from .contact_schema import (
     ContactCreate,
     ContactUpdate,
@@ -22,9 +25,13 @@ from .contact_schema import (
     ContactDeleteResponse,
     ContactGetQuery,
     ContactSortOrder,
-    ContactSortBy
+    ContactSortBy,
 )
+
+# ERROR
 from .error_schema import ErrorCode, ErrorResponse
+
+# LEAD
 from .lead_schema import (
     LeadResponse,
     LeadListResponse,
@@ -39,15 +46,28 @@ from .mailing_schema import (
     MailingDeleteResponse,
     MailingResponse,
     MailingUpdate,
-    PaginatedMailings
+    PaginatedMailings,
+)
+
+# MANAGE USER
+from .manage_user_schema import (
+    ManageUserListResponse,
+    ManageUserResponse,
+    ManageUserCreateRequest,
+    ManageUserUpdateRequest,
+    UserStatus,
+    Position,
+    UserLevel,
 )
 from .note_schema import (
     NoteCreate,
     NoteUpdate,
     PaginatedNote,
     NoteResponse,
-    NoteGetQuery
+    NoteGetQuery,
 )
+
+# PIPELINE
 from .pipeline_schema import (
     PipelineRequest,
     PipelineGetQuery,
@@ -56,6 +76,8 @@ from .pipeline_schema import (
     PipelineListResponse,
     PipelineAssignedUsers,
 )
+
+# PRODUCT
 from .product_schema import (
     ProductGetQuery,
     ProductResponse,
@@ -63,6 +85,8 @@ from .product_schema import (
     ProductListResponse,
     ProductDeleteResponse,
 )
+
+# QUOTATION
 from .quotation_schema import (
     QuotationItemRequest,
     QuotationRequest,
@@ -72,12 +96,34 @@ from .quotation_schema import (
     QuotationGetQuery,
     QuotationSendEmailResponse,
 )
+
+# RESPONSE
 from .response_schema import ResponseModel
+
+# USER
 from .user_schema import (
     UserCreateRequest,
     UserUpdateRequest,
     UserResponse,
-    UserGetQuery
+    UserGetQuery,
+    PaginatedUserResponse,
+    UserGetQuery,
+)
+
+# DEPARTMENT
+# from .department_schema import (
+#     DepartmentCreate,
+#     DepartmentUpdate,
+#     DepartmentRead,
+#     DepartmentReadWithRelations,
+#     BranchReadSimple,
+# )
+
+# BRANCH
+from .branch_schema import (
+    BranchCreate,
+    BranchUpdate,
+    BranchRead,
 )
 from .userdevice_schema import ChangePasswordSchema, UserDeviceResponse
 from .userprofile_schema import UserProfileResponse, UserProfileSchema

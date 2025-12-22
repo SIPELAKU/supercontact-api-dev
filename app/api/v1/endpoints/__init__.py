@@ -2,10 +2,15 @@ from .auth import router as auth_router
 from .contacts import router as contacts_router
 from .userprofile import router as userprofile_router
 from .leads import router as leads_router
+from .manage_users import router as manage_users_router
+from .permissions import router as permissions_router
 from .pipelines import router as pipelines_router
 from .products import router as products_router
 from .quotations import router as quotations_router
+from .roles import router as roles_router
+from .userprofile import router as userprofile_router
 from .users import router as users_router
+from .department import router as department_router
 from .mailings import router as mailings_router
 from .userdevice import router as userdevice_router
 from .notes import router as notes_router

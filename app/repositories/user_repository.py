@@ -3,11 +3,11 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlalchemy import or_, func, delete
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import UserOTP
-from app.models.user_model import User, UserOTPType
+from app.models import UserOTP, User, UserOTPType
 from app.schemas import UserGetQuery
 
 
@@ -16,7 +16,10 @@ class UserRepository:
         self.db = db
 
     async def list_users(self, query_params: UserGetQuery):
-        query = select(User)
+        query = select(User).options(
+            selectinload(User.manage_user),
+            selectinload(User.detail),
+        )
 
         if query_params.search:
             query = query.where(
@@ -25,6 +28,9 @@ class UserRepository:
                     User.email.ilike(f"%{query_params.search}%"),
                 )
             )
+
+        if query_params.position:
+            query = query.where(User.position == query_params.position)
 
         # Pagination
         skip = (query_params.page - 1) * query_params.limit
@@ -39,24 +45,35 @@ class UserRepository:
         return users, total
 
     async def get_by_email(self, email: EmailStr):
-        result = await self.db.execute(select(User).where(User.email == email))
+        result = await self.db.execute(
+            select(User)
+            .options(selectinload(User.manage_user))
+            .where(User.email == email)
+        )
         return result.scalars().first()
 
     async def get_by_id(self, user_id: UUID):
-        query = select(User).where(User.id == user_id)
-        return await self.db.scalar(query)
+        result = await self.db.execute(
+            select(User)
+            .options(selectinload(User.manage_user))
+            .where(User.id == user_id)
+        )
+        return result.scalars().first()
 
+    # CREATE
     async def create(self, user: User):
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)
         return user
 
+    # UPDATE
     async def update(self, user: User):
         await self.db.commit()
         await self.db.refresh(user)
         return user
 
+    # DELETE
     async def delete(self, user: User):
         await self.db.delete(user)
         await self.db.commit()
@@ -81,7 +98,9 @@ class UserRepository:
         await self.db.commit()
         return user_otp
 
-    async def get_active_user_otp(self, user_id: UUID, otp_type: UserOTPType) -> UserOTP:
+    async def get_active_user_otp(
+        self, user_id: UUID, otp_type: UserOTPType
+    ) -> UserOTP:
         query = (
             select(UserOTP)
             .where(UserOTP.user_id == user_id)
