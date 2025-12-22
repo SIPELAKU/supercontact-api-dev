@@ -13,8 +13,7 @@ from app.schemas.branch_schema import (
     BranchRead,
 )
 from app.models.department_enum import DepartmentEnum
-
-# from app.utils.permissions import require_permissions
+from app.models.manage_user_model import UserStatus
 
 router = APIRouter(
     prefix="/departments",
@@ -22,13 +21,13 @@ router = APIRouter(
 )
 
 
-# CREATE
+# =========================
+# CREATE BRANCH
+# =========================
 @router.post(
     "/branches",
     response_model=BranchRead,
-    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
-    # dependencies=[Depends(require_permissions("department:branch:create"))],
 )
 async def add_branch(
     payload: BranchCreate,
@@ -38,26 +37,31 @@ async def add_branch(
     return await service.add_branch(payload)
 
 
-# GET ALL BRANCHES
+# =========================
+# READ (ALL / FILTER / SEARCH)
+# =========================
 @router.get(
     "/branches",
     response_model=List[BranchRead],
-    response_model_by_alias=True,
-    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
-async def get_all_branches(
+async def get_branches(
+    department: Optional[DepartmentEnum] = Query(None),
+    q: Optional[str] = Query(None, min_length=2),
     db: AsyncSession = Depends(get_async_session),
 ):
     service = DepartmentService(db)
-    return await service.get_all_branches()
+    return await service.get_branches(
+        department=department,
+        keyword=q,
+    )
 
 
-# GET BRANCH BY ID
+# =========================
+# READ BY ID
+# =========================
 @router.get(
     "/branches/{branch_id}",
     response_model=BranchRead,
-    response_model_by_alias=True,
-    # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_branch_by_id(
     branch_id: UUID,
@@ -67,12 +71,12 @@ async def get_branch_by_id(
     return await service.get_branch_by_id(branch_id)
 
 
-# UPDATE BRANCH
+# =========================
+# UPDATE
+# =========================
 @router.put(
     "/branches/{branch_id}",
     response_model=BranchRead,
-    response_model_by_alias=True,
-    # dependencies=[Depends(require_permissions("department:branch:update"))],
 )
 async def update_branch(
     branch_id: UUID,
@@ -83,11 +87,12 @@ async def update_branch(
     return await service.update_branch(branch_id, payload)
 
 
-# DELETE BRANCH
+# =========================
+# DELETE
+# =========================
 @router.delete(
     "/branches/{branch_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    # dependencies=[Depends(require_permissions("department:branch:delete"))],
 )
 async def delete_branch(
     branch_id: UUID,
@@ -97,48 +102,23 @@ async def delete_branch(
     await service.delete_branch(branch_id)
 
 
-# GET BRANCHES BY DEPARTMENT
-@router.get(
-    "/{department}/branches",
-    response_model=List[BranchRead],
-    response_model_by_alias=True,
-    # dependencies=[Depends(require_permissions("department:branch:view"))],
-)
-async def get_branches_by_department(
-    department: DepartmentEnum,
-    db: AsyncSession = Depends(get_async_session),
-):
-    service = DepartmentService(db)
-    return await service.get_branches_by_department(department)
-
-
-# SEARCH
-@router.get(
-    "/branches/search",
-    response_model=List[BranchRead],
-    response_model_by_alias=True,
-    # dependencies=[Depends(require_permissions("department:branch:view"))],
-)
-async def filter_branch(
-    q: str = Query(..., min_length=2),
-    db: AsyncSession = Depends(get_async_session),
-):
-    service = DepartmentService(db)
-    return await service.filter_branch(q)
-
-
-# DETAIL
+# =========================
+# DEPARTMENT DETAIL (🔥 BARU)
+# =========================
 @router.get(
     "/{department}/detail",
-    # dependencies=[Depends(require_permissions("department:detail:view"))],
 )
 async def get_department_detail(
     department: DepartmentEnum,
     branch_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None, min_length=2),
+    status: Optional[UserStatus] = Query(None),
     db: AsyncSession = Depends(get_async_session),
 ):
     service = DepartmentDetailService(db)
     return await service.get_detail(
         department=department,
         branch_id=branch_id,
+        search=search,
+        status=status,
     )

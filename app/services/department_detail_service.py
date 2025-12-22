@@ -3,12 +3,10 @@ from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.exceptions import AppException
-from app.models.manage_user_model import UserLevel
+from app.models.manage_user_model import UserLevel, UserStatus
 from app.models.department_enum import DepartmentEnum
 from app.repositories.manage_user_repository import ManageUserRepository
 from app.repositories.department_repository import DepartmentRepository
-from app.schemas.error_schema import ErrorCode
 from app.services.manage_user_service import ManageUserService
 
 
@@ -25,7 +23,15 @@ class DepartmentDetailService:
         *,
         department: DepartmentEnum,
         branch_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        status: Optional[UserStatus] = None,
     ):
+        """
+        Department detail with:
+        - filter branch
+        - search user
+        - filter user status
+        """
 
         branch = None
         if branch_id:
@@ -34,9 +40,11 @@ class DepartmentDetailService:
                 branch_id=branch_id,
             )
 
-        users = await self.manage_user_repo.get_active_users_by_department(
+        users = await self.manage_user_repo.get_users_by_department_detail(
             department=department,
             branch_id=branch_id,
+            search=search,
+            status=status,
             user_levels=[UserLevel.STAFF],
         )
 

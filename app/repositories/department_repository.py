@@ -1,4 +1,5 @@
 from uuid import UUID
+from typing import Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -52,12 +53,26 @@ class DepartmentRepository:
             )
 
     # =========================
-    # GET ALL
+    # GET ALL + FILTER + SEARCH (🔥)
     # =========================
-    async def get_all_branches(self) -> list[Branch]:
-        result = await self.db.execute(
-            select(Branch).order_by(Branch.department, Branch.name)
-        )
+    async def get_branches(
+        self,
+        *,
+        department: Optional[DepartmentEnum] = None,
+        keyword: Optional[str] = None,
+    ) -> list[Branch]:
+
+        stmt = select(Branch)
+
+        if department:
+            stmt = stmt.where(Branch.department == department)
+
+        if keyword:
+            stmt = stmt.where(func.lower(Branch.name).ilike(f"%{keyword.lower()}%"))
+
+        stmt = stmt.order_by(Branch.department, Branch.name)
+
+        result = await self.db.execute(stmt)
         return result.scalars().all()
 
     # =========================
@@ -101,112 +116,10 @@ class DepartmentRepository:
                 ),
             )
 
-        except SQLAlchemyError as e:
-            await self.db.rollback()
-            raise AppException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                code=ErrorCode.DB_ERROR,
-                message=str(e),
-            )
-
     # =========================
     # DELETE
     # =========================
     async def delete_branch(self, branch_id: UUID):
         branch = await self.get_branch_by_id(branch_id)
-
-        try:
-            await self.db.delete(branch)
-            await self.db.commit()
-        except SQLAlchemyError as e:
-            await self.db.rollback()
-            raise AppException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                code=ErrorCode.DB_ERROR,
-                message=str(e),
-            )
-
-    # =========================
-    # EXISTS
-    # =========================
-    async def branch_exists(
-        self,
-        department: DepartmentEnum,
-        name: str,
-    ) -> bool:
-        result = await self.db.execute(
-            select(func.count(Branch.id)).where(
-                Branch.department == department,
-                func.lower(Branch.name) == name.lower(),
-            )
-        )
-        return result.scalar_one() > 0
-
-    # =========================
-    # FILTER BY DEPARTMENT
-    # =========================
-    async def get_branches_by_department(
-        self,
-        department: DepartmentEnum,
-    ) -> list[Branch]:
-        result = await self.db.execute(
-            select(Branch).where(Branch.department == department).order_by(Branch.name)
-        )
-        return result.scalars().all()
-
-    # =========================
-    # FILTER BY NAME
-    # =========================
-    async def filter_branch(self, keyword: str) -> list[Branch]:
-        result = await self.db.execute(
-            select(Branch)
-            .where(func.lower(Branch.name).ilike(f"%{keyword.lower()}%"))
-            .order_by(Branch.department, Branch.name)
-        )
-        return result.scalars().all()
-
-    # =========================
-    # GET BY DEPARTMENT + ID
-    # =========================
-    async def get_department_branch_by_id(
-        self,
-        department: DepartmentEnum,
-        branch_id: UUID,
-    ) -> Branch:
-        result = await self.db.execute(
-            select(Branch).where(
-                Branch.id == branch_id,
-                Branch.department == department,
-            )
-        )
-        branch = result.scalars().first()
-        if not branch:
-            raise AppException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                code=ErrorCode.DATA_NOT_FOUND,
-                message="Branch not found in this department",
-            )
-        return branch
-
-    # =========================
-    # GET BY DEPARTMENT + NAME
-    # =========================
-    async def get_department_branch_by_name(
-        self,
-        department: DepartmentEnum,
-        branch_name: str,
-    ) -> Branch:
-        result = await self.db.execute(
-            select(Branch).where(
-                Branch.department == department,
-                func.lower(Branch.name) == branch_name.lower(),
-            )
-        )
-        branch = result.scalars().first()
-        if not branch:
-            raise AppException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                code=ErrorCode.DATA_NOT_FOUND,
-                message="Branch not found in this department",
-            )
-        return branch
+        await self.db.delete(branch)
+        await self.db.commit()

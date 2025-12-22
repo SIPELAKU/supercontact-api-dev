@@ -154,6 +154,45 @@ class ManageUserRepository:
         result = await self.db.execute(stmt.order_by(User.fullname))
         return result.scalars().all()
 
+    async def get_users_by_department_detail(
+        self,
+        *,
+        department: DepartmentEnum,
+        branch_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        status: Optional[UserStatus] = None,
+        user_levels: Optional[List[UserLevel]] = None,
+    ) -> List[ManageUser]:
+
+        stmt = (
+            select(ManageUser)
+            .join(Branch)
+            .join(User)
+            .options(*self._EAGER_LOAD)
+            .where(Branch.department == department)
+        )
+
+        if branch_id:
+            stmt = stmt.where(ManageUser.branch_id == branch_id)
+
+        if status:
+            stmt = stmt.where(ManageUser.status == status)
+
+        if user_levels:
+            stmt = stmt.where(ManageUser.user_level.in_(user_levels))
+
+        if search:
+            stmt = stmt.where(
+                or_(
+                    User.fullname.ilike(f"%{search}%"),
+                    User.email.ilike(f"%{search}%"),
+                    ManageUser.employee_id.ilike(f"%{search}%"),
+                )
+            )
+
+        result = await self.db.execute(stmt.order_by(User.fullname))
+        return result.scalars().all()
+
     # HARD DELETE
     async def hard_delete(self, mu: ManageUser):
         try:
