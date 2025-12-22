@@ -26,7 +26,6 @@ router = APIRouter(
 @router.post(
     "/branches",
     response_model=BranchRead,
-    response_model_by_alias=True,
     status_code=status.HTTP_201_CREATED,
     # dependencies=[Depends(require_permissions("department:branch:create"))],
 )
@@ -42,7 +41,6 @@ async def add_branch(
 @router.get(
     "/branches",
     response_model=List[BranchRead],
-    response_model_by_alias=True,
     # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_all_branches(
@@ -56,7 +54,6 @@ async def get_all_branches(
 @router.get(
     "/branches/{branch_id}",
     response_model=BranchRead,
-    response_model_by_alias=True,
     # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_branch_by_id(
@@ -71,7 +68,6 @@ async def get_branch_by_id(
 @router.put(
     "/branches/{branch_id}",
     response_model=BranchRead,
-    response_model_by_alias=True,
     # dependencies=[Depends(require_permissions("department:branch:update"))],
 )
 async def update_branch(
@@ -101,7 +97,6 @@ async def delete_branch(
 @router.get(
     "/{department}/branches",
     response_model=List[BranchRead],
-    response_model_by_alias=True,
     # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def get_branches_by_department(
@@ -116,7 +111,6 @@ async def get_branches_by_department(
 @router.get(
     "/branches/search",
     response_model=List[BranchRead],
-    response_model_by_alias=True,
     # dependencies=[Depends(require_permissions("department:branch:view"))],
 )
 async def filter_branch(

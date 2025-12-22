@@ -107,6 +107,7 @@ class QuotationRepository:
             search = f"%{query_params.search}%"
             query = query.where(
                 or_(
+                    Quotation.quotation_number.ilike(search),
                     Contact.name.ilike(search),
                     Contact.company.ilike(search),
                 )

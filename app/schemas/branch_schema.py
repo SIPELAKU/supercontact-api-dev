@@ -1,12 +1,12 @@
 from uuid import UUID
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from sqlmodel import SQLModel, Field
 from app.models.department_enum import DepartmentEnum
 
 
 # CREATE
-class BranchCreate(BaseModel):
+class BranchCreate(SQLModel):
     department: DepartmentEnum
     branch: str = Field(
         ...,
@@ -17,7 +17,7 @@ class BranchCreate(BaseModel):
 
 
 # UPDATE
-class BranchUpdate(BaseModel):
+class BranchUpdate(SQLModel):
     department: Optional[DepartmentEnum] = None
     branch: Optional[str] = Field(
         None,
@@ -28,7 +28,7 @@ class BranchUpdate(BaseModel):
 
 
 # READ
-class BranchRead(BaseModel):
+class BranchRead(SQLModel):
     id: UUID
     department: DepartmentEnum
     branch: str
