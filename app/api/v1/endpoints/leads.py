@@ -90,7 +90,7 @@ async def create_lead(
 @router.get(
     "/{lead_id}",
     response_model=ResponseModel[LeadResponse],
-    dependencies=[Depends(require_permissions("lead:view"))],
+    # dependencies=[Depends(require_permissions("lead:view"))],
 )
 async def get_lead_by_id(
     lead_id: UUID,
