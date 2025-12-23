@@ -22,6 +22,7 @@ class UserProfileResponse(SQLModel):
     fullname: str
     email: EmailStr
     avatar_initial: Optional[str]
+    status: Optional[str]
     role: Optional[str]
     joined_date: datetime
 
